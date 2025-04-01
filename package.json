@@ -1,0 +1,15 @@
+{
+  "name": "invoice_form_vue",
+  "version": "1.0.0",
+  "description": "this app build in vue3 js in frappe to change invoice form interface",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "cd frontend && yarn install",
+    "dev": "cd frontend && yarn dev",
+    "build": "cd frontend && yarn build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
