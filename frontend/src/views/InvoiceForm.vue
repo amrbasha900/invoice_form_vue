@@ -6,10 +6,10 @@
         <h3 v-if="invoiceName" class="font-semibold text-lg">Invoice Name: {{ invoiceName }}</h3>
       </div>
       <!-- Two columns on small+ screens -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <!-- Supplier -->
         <div class="w-full">
-          <FloatLabel variant="on" class="w-full block">
+          <FloatLabel variant="on" class="w-full block ">
             <AutoComplete
               v-model="invoice.supplier"
               inputId="supplier"
@@ -104,10 +104,10 @@
       header="Add Item" 
       v-model:visible="showItemDialog"
       modal
-      :style="{ width: '100%', maxWidth: '400px', position: 'fixed', top: '5%', left: '50%', transform: 'translateX(-50%)' }" 
+      :style="{ width: '100%', maxWidth: '400px', position: 'fixed', top: '2%', left: '50%', transform: 'translateX(-50%)' }" 
       :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
     >
-      <div class="space-y-4 mt-1">
+      <div class="mt-1">
         <FloatLabel variant="on" class="w-full block">
           <AutoComplete
             v-model="newItem.item"
@@ -123,39 +123,42 @@
         <span v-if="validationErrors.item" class="text-sm text-red-500">
           Item Code is required
         </span>
-        <div class="grid grid-cols-3 gap-4">
-          <FloatLabel variant="on" class="w-full">
-            <InputNumber 
-              v-model="newItem.qty" 
-              inputId="qty" 
-              class="w-full"
-              @update:modelValue="calculateAmount"
-            />
-            <label for="qty">Quantity</label>
-          </FloatLabel>
+<div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+    <FloatLabel variant="on" class="w-full">
+  <InputText
+        :value="newItem.qty.toString()"
+        inputId="qty" 
+        inputmode="numeric"
+        class="w-full"
+            @input="handleArabicNumberInput($event, 'qty')"
 
-          <FloatLabel variant="on" class="w-full">
-            <InputNumber 
-              v-model="newItem.rate" 
-              inputId="rate" 
-              class="w-full" 
-              @update:modelValue="calculateAmount"
-            />
-            <label for="rate">Rate</label>
-          </FloatLabel>
+      />
+      <label for="qty">Quantity</label>
+    </FloatLabel>
 
-          <FloatLabel variant="on" class="w-full block">
-            <InputNumber 
-              v-model="newItem.amount" 
-              inputId="amount" 
-              class="w-full" 
-              :disabled="true"
-              mode="currency" 
-              currency="USD"
-            />
-            <label for="amount">Total Amount</label>
-          </FloatLabel>
-        </div>
+    <FloatLabel variant="on" class="w-full">
+  <InputText
+    :value="newItem.rate.toString()"
+    inputId="rate"
+    class="w-full"
+    inputmode="numeric"
+    @input="handleArabicNumberInput($event, 'rate')"
+  />
+  <label for="rate">Rate</label>
+</FloatLabel>
+
+    <FloatLabel variant="on" class="w-full">
+      <InputText
+        v-model="newItem.amount" 
+        inputId="amount" 
+        class="w-full" 
+        :disabled="true"
+        mode="currency" 
+        currency="USD"
+      />
+      <label for="amount">Total Amount</label>
+    </FloatLabel>
+</div>
         <FloatLabel variant="on" class="w-full block">
           <AutoComplete
             v-model="newItem.customer"
@@ -169,16 +172,11 @@
           <label for="item">Customer</label>
         </FloatLabel>
 
-        <div class="flex items-center gap-2">
-          <Checkbox v-model="newItem.has_commission" inputId="has_customer_commission" name="pizza" value="Cheese" />
-          <label for="ingredient1">Has Commission Invoice</label>
-        </div>
-
-        <div class="flex gap-2">
-          <Button
+<div class="card flex flex-wrap items-center justify-center gap-10">
+            <Button
             :label="editIndex !== null ? 'Update' : 'Add'"
             @click="saveItem"
-            class="w-full"
+            class="w-full my-50px"
           />
           <div class="h-3"></div>
           <Button
@@ -220,11 +218,10 @@ const invoice = reactive({
 // Form item
 const newItem = reactive({
   item: '',
-  qty: 0,
-  rate: 0,
-  amount: 0,
+  qty: null,
+  rate: null,
+  amount: null,
   customer: '',
-  has_commission: false
 })
 
 // Calculate amount when qty or rate changes
@@ -239,7 +236,22 @@ const formatCurrency = (value) => {
     currency: 'SAR' 
   }).format(value)
 }
-
+const handleArabicNumberInput = (event, field) => {
+  // Get the input value
+  const value = event.target.value;
+  
+  // Replace Arabic numerals with Western numerals
+  const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => {
+    return String.fromCharCode(d.charCodeAt(0) - 1632 + 48); // Arabic to Western
+  });
+  
+  // Convert to number and update the model
+  const numValue = parseFloat(westernValue);
+  if (!isNaN(numValue)) {
+    newItem[field] = numValue;
+    calculateAmount();
+  }
+};
 // Required field keys
 const requiredFields = ['item', 'qty', 'rate', 'customer']
 const validationErrors = reactive({})
@@ -317,7 +329,6 @@ const onRowClick = (event) => {
     rate: row.rate,
     customer: row.customer,
     amount: row.amount,
-    has_commission: row.has_commission
   })
   showItemDialog.value = true
 }
@@ -332,7 +343,6 @@ const saveItem = () => {
     rate: newItem.rate,
     amount: newItem.qty * newItem.rate,
     customer: newItem.customer,
-    has_commission: newItem.has_commission
   }
 
   if (editIndex.value !== null) {
@@ -354,16 +364,15 @@ const saveItem = () => {
 // Reset form + edit index
 const resetDialog = () => {
   newItem.item = ''
-  newItem.qty = 0
-  newItem.rate = 0
-  newItem.amount = 0
+  newItem.qty = ''
+  newItem.rate = ''
+  newItem.amount = null
   if (!invoice.customer) {
     newItem.customer = ''
   } else {
     newItem.customer = invoice.customer
   }
   
-  newItem.has_commission = false
   editIndex.value = null
 }
 
@@ -503,7 +512,6 @@ const loadInvoice = async (invoiceNameParam) => {
         label: item.customer_name || item.customer,
         code: item.customer
       },
-      has_commission: item.has_commission
     }))
 
     invoiceName.value = invoiceData.name
@@ -567,13 +575,15 @@ onMounted(async () => {
   width: 100% !important;
   max-width: 100% !important;
   display: block;
-  margin-right: 7px;
 }
 
 /* Ensure PrimeVue input wrappers play nice */
-:deep(.p-autocomplete) {
+:deep(.p-autocomplete),
+:deep(.p-inputnumber) {
   display: flex;
   width: 100% !important;
-  margin: 5px !important;
+  margin-bottom: 10px !important;
+    margin-top: 10px !important;
+
 }
 </style>

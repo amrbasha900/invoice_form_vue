@@ -9,7 +9,9 @@ module.exports = {
       '../../frappe/**/templates/**/*.html' // if you're rendering Frappe templates too
     ],
     theme: {
-      extend: {},
+      extend: {fontFamily: {
+        cairo: ['Cairo', 'sans-serif'],
+      },},
     },
     plugins: [PrimeUI],
   }
