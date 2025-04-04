@@ -20,7 +20,7 @@ def create_invoice(invoice_data):
         data = json.loads(invoice_data)
         frappe.logger().info(f"📥 Incoming invoice data: {data}")
 
-        if not data.get("supplier") or not data.get("customer"):
+        if not data.get("supplier"):
             frappe.throw(_("Supplier and Customer are required"))
 
         # Create or fetch doc
@@ -74,7 +74,7 @@ def get_invoice(invoice_name):
         "supplier": doc.get("supplier"),
         "supplier_name": frappe.db.get_value("Supplier", doc.get("supplier"), "supplier_name"),
         "customer": doc.customer,
-        "customer_name": frappe.db.get_value("Customer", doc.customer, "customer_name"),
+        "customer_name": frappe.db.get_value("Customer", doc.customer, "customer_name") or '',
         "items": []
     }
 

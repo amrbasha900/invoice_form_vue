@@ -24,6 +24,9 @@
             />
             <label for="supplier">Supplier</label>
           </FloatLabel>
+          <span v-if="validationErrors.supplier" class="text-sm text-red-500 validationErrors">
+              Supplier is required
+            </span>
         </div>
 
         <!-- Customer -->
@@ -47,7 +50,7 @@
       <div class="mt-6">
         <DataTable
           :value="invoice.items"
-          class="w-full mt-6"
+          class="w-full mt-6 text-lg"
           responsiveLayout="scroll"
           @row-click="onRowClick"
         >
@@ -137,11 +140,11 @@
           />
           <label for="item">Item Code</label>
         </FloatLabel>
-        <span v-if="validationErrors.item" class="text-sm text-red-500">
+        <span v-if="validationErrors.item" class="text-sm text-red-500 validationErrors">
           Item Code is required
         </span>
         <div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
-          
+          <div>
           <FloatLabel variant="on">
             <InputText
               v-model="qtyInput"
@@ -151,6 +154,11 @@
             />
             <label for="qty">Qty</label>
           </FloatLabel>
+          <span v-if="validationErrors.qty" class="text-sm text-red-500 validationErrors">
+              Qty is required
+            </span>
+          </div>
+          <div>
           <FloatLabel variant="on">
             <InputText
               v-model="rateInput"
@@ -160,7 +168,10 @@
             />
             <label for="rate">Rate</label>
           </FloatLabel>
-
+<span v-if="validationErrors.rate" class="text-sm text-red-500 validationErrors">
+              Rate is required
+            </span>
+          </div>
           <FloatLabel variant="on" class="w-full">
             <InputText
               v-model="newItem.amount"
@@ -186,7 +197,9 @@
           />
           <label for="item">Customer</label>
         </FloatLabel>
-
+<span v-if="validationErrors.customer" class="text-sm text-red-500 validationErrors">
+              Customer is required
+            </span>
         <div class="flex flex-wrap items-center justify-center gap-10">
           <Button
             :label="editIndex !== null ? 'Update' : 'Add'"
@@ -313,6 +326,7 @@ const qtyInput = computed({
 // Required field keys
 
 const requiredFields = ["item", "qty", "rate", "customer"];
+const requiredMainFields = ["supplier"];
 const validationErrors = reactive({});
 
 // Suggestions
@@ -340,6 +354,21 @@ const validateDialog = () => {
   return isValid;
 };
 
+const validateSupplier  = () => {
+  let isValid = true;
+  requiredMainFields.forEach((field) => {
+    if (
+      !invoice[field] ||
+      (typeof invoice[field] === "number" && invoice[field] <= 0)
+    ) {
+      validationErrors[field] = true;
+      isValid = false;
+    } else {
+      validationErrors[field] = false;
+    }
+  });
+  return isValid;
+};
 // Watch for changes to qty or rate to update amount
 watch(
   () => [newItem.qty, newItem.rate],
@@ -397,7 +426,6 @@ const onRowClick = (event) => {
 // Save item (add or update)
 const saveItem = () => {
   if (!validateDialog()) return;
-
   const itemData = {
     item: newItem.item.code,
     qty: newItem.qty,
@@ -482,6 +510,7 @@ const handleDelete = () => {
 
 // Save Invoice Logic
 const handleSaveInvoice = async () => {
+  if (!validateSupplier()) return;
   try {
     const invoiceData = {
       supplier: invoice.supplier,
@@ -512,6 +541,7 @@ const handleSaveInvoice = async () => {
 
 const saveInvoice = async (invoiceData) => {
   try {
+      if (!validateSupplier()) return;
     // Send invoice data to the backend to create or update
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.create_invoice",
@@ -711,5 +741,9 @@ onMounted(async () => {
 :deep(.p-button) {
    max-width: 500px !important;
    margin: 10px auto;
+}
+.validationErrors{
+  font-size: 12px;
+  color: red;
 }
 </style>
