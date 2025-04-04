@@ -30,6 +30,7 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import FloatLabel from 'primevue/floatlabel'
 import Menubar from "primevue/menubar"
 import Tag from 'primevue/tag'
+import IftaLabel from 'primevue/iftalabel'
 import { useConfirm } from 'primevue/useconfirm'
 
 
@@ -72,6 +73,7 @@ app.component('ConfirmDialog', ConfirmDialog)
 app.component('FloatLabel', FloatLabel)
 app.component('Menubar', Menubar)
 app.component('Tag', Tag)
+app.component('IftaLabel', IftaLabel)
 
 // Configure route gaurds
 router.beforeEach(async (to, from, next) => {

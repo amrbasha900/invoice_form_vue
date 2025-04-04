@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-white flex">
+  <div class="min-h-screen bg-white flex login-form">
 	<div class="mx-auto w-full max-w-sm lg:w-96">
 	  <form @submit.prevent="login" class="space-y-6">
 		<label for="email"> Username: </label>
@@ -45,3 +45,9 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.login-form {
+  margin: 50px auto;
+}
+</style>

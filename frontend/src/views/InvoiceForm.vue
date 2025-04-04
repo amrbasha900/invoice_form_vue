@@ -3,13 +3,15 @@
     <form @submit.prevent="saveInvoice">
       <!-- Display Invoice Name -->
       <div class="mb-4">
-        <h3 v-if="invoiceName" class="font-semibold text-lg">Invoice Name: {{ invoiceName }}</h3>
+        <h3 v-if="invoiceName" class="font-semibold text-lg">
+          Invoice Name: {{ invoiceName }}
+        </h3>
       </div>
       <!-- Two columns on small+ screens -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <!-- Supplier -->
         <div class="w-full">
-          <FloatLabel variant="on" class="w-full block ">
+          <FloatLabel variant="on" class="w-full block">
             <AutoComplete
               v-model="invoice.supplier"
               inputId="supplier"
@@ -41,7 +43,12 @@
       </div>
 
       <div class="mt-6">
-        <DataTable :value="invoice.items" class="w-full mt-6" responsiveLayout="scroll" @row-click="onRowClick">
+        <DataTable
+          :value="invoice.items"
+          class="w-full mt-6"
+          responsiveLayout="scroll"
+          @row-click="onRowClick"
+        >
           <Column field="item" header="Item" />
           <Column field="qty" header="Qty" />
           <Column field="rate" header="Rate" />
@@ -57,7 +64,6 @@
               {{ slotProps.data.customer?.label || slotProps.data.customer }}
             </template>
           </Column>
-          
         </DataTable>
       </div>
       <div class="mt-6">
@@ -66,20 +72,20 @@
       <!-- Submit -->
       <!-- Buttons: Save, Update, Delete, Submit -->
       <div class="mt-6">
-        <Button 
+        <Button
           v-if="isInvoiceNew"
           label="Save Invoice"
-          @click="handleSaveInvoice" 
+          @click="handleSaveInvoice"
           class="w-full"
         />
-        <Button 
+        <Button
           v-if="!isInvoiceNew"
           label="Update"
           @click="handleSaveInvoice"
           class="w-full mt-2"
         />
 
-        <Button 
+        <Button
           v-if="!isInvoiceNew"
           label="Delete Invoice"
           icon="pi pi-trash"
@@ -88,7 +94,7 @@
           class="w-full mt-2"
         />
 
-        <Button 
+        <Button
           v-if="!isInvoiceNew"
           label="Submit Invoice"
           icon="pi pi-check"
@@ -101,10 +107,17 @@
 
     <!-- Add Item Dialog -->
     <Dialog
-      header="Add Item" 
+      header="Add Item"
       v-model:visible="showItemDialog"
       modal
-      :style="{ width: '100%', maxWidth: '400px', position: 'fixed', top: '2%', left: '50%', transform: 'translateX(-50%)' }" 
+      :style="{
+        width: '100%',
+        maxWidth: '400px',
+        position: 'fixed',
+        top: '2%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+      }"
       :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
     >
       <div class="mt-1">
@@ -123,42 +136,39 @@
         <span v-if="validationErrors.item" class="text-sm text-red-500">
           Item Code is required
         </span>
-<div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
-    <FloatLabel variant="on" class="w-full">
-  <InputText
-        :value="newItem.qty.toString()"
-        inputId="qty" 
-        inputmode="numeric"
-        class="w-full"
-            @input="handleArabicNumberInput($event, 'qty')"
+        <div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+          
+          <FloatLabel variant="on">
+            <InputText
+              v-model="qtyInput"
+              inputId="qty"
+              class="w-full"
+              inputmode="numeric"
+            />
+            <label for="qty">Qty</label>
+          </FloatLabel>
+          <FloatLabel variant="on">
+            <InputText
+              v-model="rateInput"
+              inputId="rate"
+              class="w-full"
+              inputmode="numeric"
+            />
+            <label for="rate">Rate</label>
+          </FloatLabel>
 
-      />
-      <label for="qty">Quantity</label>
-    </FloatLabel>
-
-    <FloatLabel variant="on" class="w-full">
-  <InputText
-    :value="newItem.rate.toString()"
-    inputId="rate"
-    class="w-full"
-    inputmode="numeric"
-    @input="handleArabicNumberInput($event, 'rate')"
-  />
-  <label for="rate">Rate</label>
-</FloatLabel>
-
-    <FloatLabel variant="on" class="w-full">
-      <InputText
-        v-model="newItem.amount" 
-        inputId="amount" 
-        class="w-full" 
-        :disabled="true"
-        mode="currency" 
-        currency="USD"
-      />
-      <label for="amount">Total Amount</label>
-    </FloatLabel>
-</div>
+          <FloatLabel variant="on" class="w-full">
+            <InputText
+              v-model="newItem.amount"
+              inputId="amount"
+              class="w-full"
+              :disabled="true"
+              mode="currency"
+              currency="SAR"
+            />
+            <label for="amount">Total Amount</label>
+          </FloatLabel>
+        </div>
         <FloatLabel variant="on" class="w-full block">
           <AutoComplete
             v-model="newItem.customer"
@@ -172,8 +182,8 @@
           <label for="item">Customer</label>
         </FloatLabel>
 
-<div class="card flex flex-wrap items-center justify-center gap-10">
-            <Button
+        <div class="flex flex-wrap items-center justify-center gap-10">
+          <Button
             :label="editIndex !== null ? 'Update' : 'Add'"
             @click="saveItem"
             class="w-full my-50px"
@@ -194,148 +204,194 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
-const route = useRoute()
-import axios from 'axios'
-import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
+import { reactive, ref, onMounted, watch , computed} from "vue";
+import { useRoute } from "vue-router";
+const route = useRoute();
+import axios from "axios";
+import { useToast } from "primevue/usetoast";
+import { useConfirm } from "primevue/useconfirm";
 
-const toast = useToast()
-const confirm = useConfirm()
+const toast = useToast();
+const confirm = useConfirm();
 
 // State
-const showItemDialog = ref(false)
-const editIndex = ref(null)
-const isInvoiceNew = ref(true) // Track if the invoice is new
-const invoiceName = ref(null)
+const showItemDialog = ref(false);
+const editIndex = ref(null);
+const isInvoiceNew = ref(true); // Track if the invoice is new
+const invoiceName = ref(null);
 const invoice = reactive({
-  supplier: '',
-  customer: '',
+  supplier: "",
+  customer: "",
   items: [],
-})
+});
 
 // Form item
 const newItem = reactive({
-  item: '',
+  item: "",
   qty: null,
+  qtyEditing: false,
   rate: null,
+  rateEditing: false,
   amount: null,
-  customer: '',
-})
+  customer: "",
+});
 
 // Calculate amount when qty or rate changes
 const calculateAmount = () => {
-  newItem.amount = (newItem.qty || 0) * (newItem.rate || 0)
-}
+  newItem.amount = (newItem.qty || 0) * (newItem.rate || 0);
+};
 
 // Format currency for display
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-US', { 
-    style: 'currency', 
-    currency: 'SAR' 
-  }).format(value)
-}
-const handleArabicNumberInput = (event, field) => {
-  // Get the input value
-  const value = event.target.value;
-  
-  // Replace Arabic numerals with Western numerals
-  const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => {
-    return String.fromCharCode(d.charCodeAt(0) - 1632 + 48); // Arabic to Western
-  });
-  
-  // Convert to number and update the model
-  const numValue = parseFloat(westernValue);
-  if (!isNaN(numValue)) {
-    newItem[field] = numValue;
-    calculateAmount();
-  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "SAR",
+  }).format(value);
 };
+
+//Handle Arabic Numbers
+const rateInput = computed({
+  get() {
+    // Return current value as string
+    return newItem.rate === 0 && !newItem.rateEditing ? '' : newItem.rate.toString();
+  },
+  set(value) {
+    // Flag to track if we're editing (to handle empty state better)
+    newItem.rateEditing = true;
+    
+    // Handle Arabic numerals
+    const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
+      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
+    });
+    
+    // If empty, set to 0 but keep track that we're editing
+    if (westernValue === '') {
+      newItem.rate = 0;
+      calculateAmount();
+      return;
+    }
+    
+    // Only update if it's a valid number
+    const numValue = parseFloat(westernValue);
+    if (!isNaN(numValue)) {
+      newItem.rate = numValue;
+      calculateAmount();
+    }
+  }
+});
+// Also need to do the same for qty
+const qtyInput = computed({
+  get() {
+    return newItem.qty === 0 && !newItem.qtyEditing ? '' : newItem.qty.toString();
+  },
+  set(value) {
+    newItem.qtyEditing = true;
+    
+    const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
+      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
+    });
+    
+    if (westernValue === '') {
+      newItem.qty = 0;
+      calculateAmount();
+      return;
+    }
+    
+    const numValue = parseFloat(westernValue);
+    if (!isNaN(numValue)) {
+      newItem.qty = numValue;
+      calculateAmount();
+    }
+  }
+});
+
 // Required field keys
-const requiredFields = ['item', 'qty', 'rate', 'customer']
-const validationErrors = reactive({})
+
+const requiredFields = ["item", "qty", "rate", "customer"];
+const validationErrors = reactive({});
 
 // Suggestions
-const allSuppliers = ref([])
-const allCustomers = ref([])
-const allItems = ref([])
-const supplierSuggestions = ref([])
-const customerSuggestions = ref([])
-const itemSuggestions = ref([])
+const allSuppliers = ref([]);
+const allCustomers = ref([]);
+const allItems = ref([]);
+const supplierSuggestions = ref([]);
+const customerSuggestions = ref([]);
+const itemSuggestions = ref([]);
 
 // Validate form
 const validateDialog = () => {
-  let isValid = true
-  requiredFields.forEach(field => {
+  let isValid = true;
+  requiredFields.forEach((field) => {
     if (
       !newItem[field] ||
-      (typeof newItem[field] === 'number' && newItem[field] <= 0)
+      (typeof newItem[field] === "number" && newItem[field] <= 0)
     ) {
-      validationErrors[field] = true
-      isValid = false
+      validationErrors[field] = true;
+      isValid = false;
     } else {
-      validationErrors[field] = false
+      validationErrors[field] = false;
     }
-  })
-  return isValid
-}
+  });
+  return isValid;
+};
 
 // Watch for changes to qty or rate to update amount
-watch(() => [newItem.qty, newItem.rate], () => {
-  calculateAmount()
-}, { deep: true })
+watch(
+  () => [newItem.qty, newItem.rate],
+  () => {
+    calculateAmount();
+  },
+  { deep: true }
+);
 
 // Search methods
 const searchSupplier = (event) => {
-  const query = event.query.toLowerCase()
+  const query = event.query.toLowerCase();
   supplierSuggestions.value = allSuppliers.value.filter((s) =>
     s.label.toLowerCase().includes(query)
-  )
-}
+  );
+};
 
 const searchCustomer = (event) => {
-  const query = event.query?.toLowerCase() || ''
+  const query = event.query?.toLowerCase() || "";
   customerSuggestions.value = !query
     ? allCustomers.value.slice(0, 5)
-    : allCustomers.value.filter((c) =>
-        c.label.toLowerCase().includes(query)
-      )
-}
+    : allCustomers.value.filter((c) => c.label.toLowerCase().includes(query));
+};
 
 const searchItem = (event) => {
-  const query = event.query.toLowerCase()
+  const query = event.query.toLowerCase();
   itemSuggestions.value = allItems.value.filter((i) =>
     i.label.toLowerCase().includes(query)
-  )
-}
+  );
+};
 
 // Open add dialog
 const openAddDialog = () => {
-  resetDialog()
+  resetDialog();
   if (invoice.customer) {
-    newItem.customer = invoice.customer
+    newItem.customer = invoice.customer;
   }
-  showItemDialog.value = true
-}
+  showItemDialog.value = true;
+};
 
 // Open edit dialog from row
 const onRowClick = (event) => {
-  const row = event.data
-  editIndex.value = event.index
+  const row = event.data;
+  editIndex.value = event.index;
   Object.assign(newItem, {
     item: { label: row.item, code: row.item },
     qty: row.qty,
     rate: row.rate,
     customer: row.customer,
     amount: row.amount,
-  })
-  showItemDialog.value = true
-}
+  });
+  showItemDialog.value = true;
+};
 
 // Save item (add or update)
 const saveItem = () => {
-  if (!validateDialog()) return
+  if (!validateDialog()) return;
 
   const itemData = {
     item: newItem.item.code,
@@ -343,67 +399,81 @@ const saveItem = () => {
     rate: newItem.rate,
     amount: newItem.qty * newItem.rate,
     customer: newItem.customer,
-  }
+  };
 
   if (editIndex.value !== null) {
-    invoice.items[editIndex.value] = itemData
+    invoice.items[editIndex.value] = itemData;
   } else {
-    invoice.items.push(itemData)
+    invoice.items.push(itemData);
   }
 
   toast.add({
-    severity: editIndex.value !== null ? 'success' : 'info',
-    summary: editIndex.value !== null ? 'Item Updated' : 'Item Added',
-    detail: `Item ${editIndex.value !== null ? 'updated' : 'added'} successfully`,
-    life: 2000
-  })
+    severity: editIndex.value !== null ? "success" : "info",
+    summary: editIndex.value !== null ? "Item Updated" : "Item Added",
+    detail: `Item ${
+      editIndex.value !== null ? "updated" : "added"
+    } successfully`,
+    life: 2000,
+  });
 
-  resetDialog()
-}
+  resetDialog();
+};
 
 // Reset form + edit index
 const resetDialog = () => {
-  newItem.item = ''
-  newItem.qty = ''
-  newItem.rate = ''
-  newItem.amount = null
+  newItem.item = "";
+  newItem.qty = "";
+   newItem.qtyEditing = false;
+  newItem.rate = "";
+   newItem.rateEditing = false;
+  newItem.amount = null;
   if (!invoice.customer) {
-    newItem.customer = ''
+    newItem.customer = "";
   } else {
-    newItem.customer = invoice.customer
+    newItem.customer = invoice.customer;
   }
-  
-  editIndex.value = null
-}
+
+  editIndex.value = null;
+};
 
 const resetInvoiceForm = () => {
-  invoice.supplier = ''
-  invoice.customer = ''
-  invoice.items = []
-  invoiceName.value = null
-  isInvoiceNew.value = true
-}
+  invoice.supplier = "";
+  invoice.customer = "";
+  invoice.items = [];
+  invoiceName.value = null;
+  isInvoiceNew.value = true;
+};
 
 // Delete item
 const handleDelete = () => {
   confirm.require({
-    message: 'Are you sure you want to delete this item?',
-    header: 'Confirm Delete',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    acceptLabel: 'Yes, Delete',
-    rejectLabel: 'Cancel',
+    message: "Are you sure you want to delete this item?",
+    header: "Confirm Delete",
+    icon: "pi pi-exclamation-triangle",
+    acceptClass: "p-button-danger",
+    acceptLabel: "Yes, Delete",
+    rejectLabel: "Cancel",
     accept: () => {
-      invoice.items.splice(editIndex.value, 1)
-      toast.add({ severity: 'success', summary: 'Deleted', detail: 'Item removed', life: 2000 })
-      resetDialog()
-      showItemDialog.value = false
+      invoice.items.splice(editIndex.value, 1);
+      toast.add({
+        severity: "success",
+        summary: "Deleted",
+        detail: "Item removed",
+        life: 2000,
+      });
+      resetDialog();
+      showItemDialog.value = false;
     },
     reject: () => {
-      toast.add({ severity: 'info', summary: 'Cancelled', detail: 'Delete cancelled', life: 2000 })
-    }
-  })
-}
+      toast.add({
+        severity: "info",
+        summary: "Cancelled",
+        detail: "Delete cancelled",
+        life: 2000,
+      });
+    },
+  });
+};
 
 // Save Invoice Logic
 const handleSaveInvoice = async () => {
@@ -412,143 +482,187 @@ const handleSaveInvoice = async () => {
       supplier: invoice.supplier,
       customer: invoice.customer,
       items: invoice.items,
-      posting_date: new Date().toISOString().split('T')[0], // Get current date in YYYY-MM-DD format
-      invoice_id: invoiceName.value // Pass invoice ID for update, otherwise null for new
+      posting_date: new Date().toISOString().split("T")[0], // Get current date in YYYY-MM-DD format
+      invoice_id: invoiceName.value, // Pass invoice ID for update, otherwise null for new
     };
 
-    const response = await saveInvoice(invoiceData);  // Pass the invoice data to saveInvoice method
-    console.log(response)
-    invoiceName.value = response.message.invoice_name;  // Show the invoice name after save/update
+    const response = await saveInvoice(invoiceData); // Pass the invoice data to saveInvoice method
+    console.log(response);
+    invoiceName.value = response.message.invoice_name; // Show the invoice name after save/update
     toast.add({
-      severity: 'success',
-      summary: isInvoiceNew.value ? 'Invoice Created' : 'Invoice Updated',
-      detail: `The invoice has been ${isInvoiceNew.value ? 'created' : 'updated'} successfully.`,
-      life: 2000
+      severity: "success",
+      summary: isInvoiceNew.value ? "Invoice Created" : "Invoice Updated",
+      detail: `The invoice has been ${
+        isInvoiceNew.value ? "created" : "updated"
+      } successfully.`,
+      life: 2000,
     });
 
     isInvoiceNew.value = false; // Mark as existing invoice
   } catch (error) {
     // Show error in toast if API returns an error message
-    toast.add({ severity: 'error', summary: 'Error', detail: error.message });
+    toast.add({ severity: "error", summary: "Error", detail: error.message });
   }
-}
+};
 
 const saveInvoice = async (invoiceData) => {
   try {
     // Send invoice data to the backend to create or update
-    const response = await axios.post('/api/method/invoice_form_vue.api.create_invoice', {
-      invoice_data: JSON.stringify(invoiceData)
-    });
+    const response = await axios.post(
+      "/api/method/invoice_form_vue.api.create_invoice",
+      {
+        invoice_data: JSON.stringify(invoiceData),
+      }
+    );
 
     // Return response with invoice name and supplier info for display
     return response.data;
   } catch (error) {
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to save/update invoice.',
-      life: 2000
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to save/update invoice.",
+      life: 2000,
     });
-    throw new Error(error.response?.data?.message || 'An unknown error occurred');
+    throw new Error(
+      error.response?.data?.message || "An unknown error occurred"
+    );
   }
-}
+};
 
 const deleteInvoice = async () => {
   try {
     confirm.require({
-      message: 'Are you sure you want to delete this invoice?',
-      header: 'Confirm Delete',
-      icon: 'pi pi-exclamation-triangle',
-      acceptClass: 'p-button-danger',
-      acceptLabel: 'Yes, Delete',
-      rejectLabel: 'Cancel',
+      message: "Are you sure you want to delete this invoice?",
+      header: "Confirm Delete",
+      icon: "pi pi-exclamation-triangle",
+      acceptClass: "p-button-danger",
+      acceptLabel: "Yes, Delete",
+      rejectLabel: "Cancel",
       accept: async () => {
         // Assuming an API to delete the invoice
-        const response = await axios.post('/api/method/invoice_form_vue.api.delete_invoice', { invoice_name: invoiceName.value })
-        toast.add({ severity: 'success', summary: 'Invoice Deleted', detail: 'The invoice has been deleted.' })
-        resetInvoiceForm()
-      }
-    })
+        const response = await axios.post(
+          "/api/method/invoice_form_vue.api.delete_invoice",
+          { invoice_name: invoiceName.value }
+        );
+        toast.add({
+          severity: "success",
+          summary: "Invoice Deleted",
+          detail: "The invoice has been deleted.",
+          life: 2000,
+        });
+        resetInvoiceForm();
+      },
+    });
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete invoice.' })
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to delete invoice.",
+    });
   }
-}
+};
 
 const submitInvoice = async () => {
   try {
     // Assuming an API to submit the invoice
-    const response = await axios.post('/api/method/invoice_form_vue.api.remove_from_invoice', { invoice_name: invoiceName.value })
-    toast.add({ severity: 'success', summary: 'Invoice Submitted', detail: 'The invoice has been submitted.' })
-    resetInvoiceForm()
+    const response = await axios.post(
+      "/api/method/invoice_form_vue.api.remove_from_invoice",
+      { invoice_name: invoiceName.value }
+    );
+    toast.add({
+      severity: "success",
+      summary: "Invoice Submitted",
+      detail: "The invoice has been submitted.",
+      life: 2000,
+    });
+    resetInvoiceForm();
   } catch (error) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to submit invoice.' })
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to submit invoice.",
+    });
   }
-}
+};
 
 const loadInvoice = async (invoiceNameParam) => {
   try {
-    const res = await axios.get('/api/method/invoice_form_vue.api.get_invoice', {
-      params: { invoice_name: invoiceNameParam }
-    })
+    const res = await axios.get(
+      "/api/method/invoice_form_vue.api.get_invoice",
+      {
+        params: { invoice_name: invoiceNameParam },
+      }
+    );
 
-    const invoiceData = res.data.message
+    const invoiceData = res.data.message;
 
     invoice.supplier = {
       label: invoiceData.supplier_name,
-      code: invoiceData.supplier
-    }
+      code: invoiceData.supplier,
+    };
 
     invoice.customer = {
       label: invoiceData.customer_name,
-      code: invoiceData.customer
-    }
+      code: invoiceData.customer,
+    };
 
-    invoice.items = (invoiceData.items || []).map(item => ({
+    invoice.items = (invoiceData.items || []).map((item) => ({
       item: item.item_code,
       qty: item.qty,
       rate: item.price,
       amount: item.total,
       customer: {
         label: item.customer_name || item.customer,
-        code: item.customer
+        code: item.customer,
       },
-    }))
+    }));
 
-    invoiceName.value = invoiceData.name
-    isInvoiceNew.value = false
+    invoiceName.value = invoiceData.name;
+    isInvoiceNew.value = false;
   } catch (err) {
-    console.error('Failed to load invoice:', err)
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load invoice data.' })
+    console.error("Failed to load invoice:", err);
+    toast.add({
+      severity: "error",
+      summary: "Error",
+      detail: "Failed to load invoice data.",
+    });
   }
-}
+};
 
 // Load all options
 onMounted(async () => {
   try {
-    const response = await axios.get('/api/method/invoice_form_vue.api.get_suppliers_and_customers')
-    const result = response.data.message || response.data
+    const response = await axios.get(
+      "/api/method/invoice_form_vue.api.get_suppliers_and_customers"
+    );
+    const result = response.data.message || response.data;
 
     const formatList = (list) =>
       (list || []).map((entry) => ({
-        label: entry.customer_name || entry.supplier_name || entry.name || entry.item_name,
-        code: entry.name || '',
-      }))
+        label:
+          entry.customer_name ||
+          entry.supplier_name ||
+          entry.name ||
+          entry.item_name,
+        code: entry.name || "",
+      }));
 
-    allSuppliers.value = formatList(result.suppliers)
-    allCustomers.value = formatList(result.customers)
-    allItems.value = formatList(result.items)
+    allSuppliers.value = formatList(result.suppliers);
+    allCustomers.value = formatList(result.customers);
+    allItems.value = formatList(result.items);
 
-    supplierSuggestions.value = [...allSuppliers.value]
-    customerSuggestions.value = [...allCustomers.value]
-    itemSuggestions.value = [...allItems.value]
+    supplierSuggestions.value = [...allSuppliers.value];
+    customerSuggestions.value = [...allCustomers.value];
+    itemSuggestions.value = [...allItems.value];
 
     if (route.query.invoice_name) {
-      await loadInvoice(route.query.invoice_name)
+      await loadInvoice(route.query.invoice_name);
     }
   } catch (error) {
-    console.error('Error loading supplier/customer data:', error)
+    console.error("Error loading supplier/customer data:", error);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -573,17 +687,24 @@ onMounted(async () => {
 :deep(.p-element),
 :deep(.p-inputtext-sm) {
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: 500px !important;
   display: block;
 }
 
 /* Ensure PrimeVue input wrappers play nice */
 :deep(.p-autocomplete),
 :deep(.p-inputnumber) {
+    max-width: 500px !important;
   display: flex;
   width: 100% !important;
   margin-bottom: 10px !important;
-    margin-top: 10px !important;
-
+  margin-top: 10px !important;
+}
+:deep(.p-datatable) {
+   max-width: 500px !important;
+}
+:deep(.p-button) {
+   max-width: 500px !important;
+   margin: 10px auto;
 }
 </style>

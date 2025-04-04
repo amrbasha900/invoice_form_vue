@@ -1,5 +1,8 @@
 <template>
+
   <div class="min-h-screen bg-gray-50">
+        <Toast position="top-right" />
+
     <!-- HEADER -->
     <header class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +23,6 @@
     </main>
 
     <!-- GLOBAL UI -->
-    <Toast position="bottom-right" />
     <ConfirmDialog />
   </div>
 </template>
@@ -106,5 +108,72 @@ const menuItems = ref([
 
 :deep(.p-menuitem-icon) {
   margin-right: 0.5rem !important;
+}
+
+
+/* Mobile toast styles */
+.p-toast {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.p-toast-top {
+  top: env(safe-area-inset-top, 10px) !important;
+  left: 0;
+  right: 0;
+  align-items: center;
+}
+
+.p-toast-message {
+  margin: 0 1rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-width: 0;
+}
+
+.p-toast-message-content {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.p-toast-message-text {
+  margin-left: 0.5rem;
+}
+
+.p-toast-message-icon {
+  font-size: 1.5rem;
+}
+
+.p-toast-summary {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.p-toast-detail {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* Custom colors for different toast types */
+.p-toast-message-success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.p-toast-message-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.p-toast-message-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.p-toast-message-warn {
+  background-color: #fff3cd;
+  color: #856404;
 }
 </style>

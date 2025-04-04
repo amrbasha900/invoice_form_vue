@@ -130,7 +130,7 @@ onMounted(async () => {
     
     // Get dashboard data
     const res = await axios.get('/api/method/invoice_form_vue.api.get_dashboard_data')
-    const data = res.data.message || res.data
+    const data = res.data.message.message || res.data
     
     // Update statistics
     stats.value = {
@@ -140,6 +140,7 @@ onMounted(async () => {
     
     // Update recent invoices
     recentInvoices.value = data.recent_invoices || []
+    console.log(data)
     
   } catch (error) {
     console.error('Error loading dashboard data:', error)

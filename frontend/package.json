@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build --base=/assets/invoice_form_vue/frontend/ && yarn copy-html-entry",
     "preview": "vite preview",
-    "copy-html-entry": "cp ../invoice_form_vue/public/frontend/index.html ../invoice_form_vue/www/frontend.html"
+    "copy-html-entry": "cp ../invoice_form_vue/public/frontend/index.html ../invoice_form_vue/www/invoice_form.html"
   },
   "dependencies": {
     "@primeuix/themes": "^1.0.0",

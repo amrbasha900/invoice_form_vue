@@ -6,8 +6,8 @@ from frappe import _
 @frappe.whitelist()
 def get_suppliers_and_customers():
     suppliers = frappe.get_all("Supplier", fields=["name", "supplier_name"])
-    customers = frappe.get_all("Customer", fields=["name", "customer_name"])
-    items = frappe.get_all("Item", fields=["name", "item_name"])
+    customers = frappe.get_all("Customer", filters={'is_customer':1, 'is_frozen':0},fields=["name", "customer_name"])
+    items = frappe.get_all("Item", filters={'commission_item':0},fields=["name", "item_name"])
     return {
         "suppliers": suppliers,
         "customers": customers,
@@ -102,12 +102,12 @@ def remove_from_invoice(invoice_name):
     # Example logic to submit the invoice
     doc = frappe.get_doc("Invoice Form", invoice_name)
     if doc.docstatus == 0:
-        doc.submit()
+        doc.is_draft = 0
+        doc.save()
         frappe.db.commit()
         return {"status": "submitted"}
     else:
         frappe.throw(_("Invoice is already submitted."))
-
 
 @frappe.whitelist()
 def get_draft_invoice_form():
@@ -151,3 +151,59 @@ def get_draft_invoice_form():
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), _("Failed to fetch draft invoices"))
         return {"error": str(e), "invoices": []}
+
+@frappe.whitelist()
+def get_dashboard_data():
+    """
+    Get dashboard data including counts and recent invoices.
+    
+    Returns:
+        dict: Dashboard statistics and recent invoice list
+    """
+    try:
+        # Get draft invoice count
+        draft_count = frappe.db.count(
+            "Invoice Form",  # Use your actual doctype name
+            {"docstatus": 0, 'is_draft':1}  # docstatus 0 means draft
+        )
+        
+        # Get submitted invoice count
+        submitted_count = frappe.db.count(
+            "Invoice Form",  # Use your actual doctype name
+            {"docstatus": 1}  # docstatus 1 means submitted
+        )
+        
+        # Get recent invoices (both draft and submitted)
+        recent_invoices = frappe.get_all(
+            "Invoice Form",  # Use your actual doctype name
+            fields=[
+                "name", 
+                "posting_date", 
+                "customer", 
+                "customer_name", 
+                "supplier", 
+                "supplier_name",
+                "docstatus",
+                "modified"
+            ],
+            order_by="modified desc",
+            limit=10
+        )
+        
+        # Add status text and format dates
+        for invoice in recent_invoices:
+            invoice["status"] = "Submitted" if invoice.get("docstatus") == 1 else "Draft"
+            if invoice.get("posting_date"):
+                invoice["posting_date"] = invoice["posting_date"].strftime("%Y-%m-%d")
+        
+        return {
+            "message": {
+                "draft_count": draft_count,
+                "submitted_count": submitted_count,
+                "recent_invoices": recent_invoices
+            }
+        }
+        
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), _("Failed to fetch dashboard data"))
+        frappe.throw(_("Failed to fetch dashboard data: {0}").format(str(e)))
