@@ -19,6 +19,7 @@
               optionLabel="label"
               @complete="searchSupplier"
               :forceSelection="true"
+              :completeOnFocus="true"
               class="w-full"
             />
             <label for="supplier">Supplier</label>
@@ -35,6 +36,7 @@
               optionLabel="label"
               @complete="searchCustomer"
               :forceSelection="true"
+              :completeOnFocus="true"
               class="w-full"
             />
             <label for="customer">Customer</label>
@@ -110,6 +112,7 @@
       header="Add Item"
       v-model:visible="showItemDialog"
       modal
+       :dismissableMask="true"
       :style="{
         width: '100%',
         maxWidth: '400px',
@@ -129,6 +132,7 @@
             optionLabel="label"
             @complete="searchItem"
             :forceSelection="true"
+            :completeOnFocus="true"
             class="w-full"
           />
           <label for="item">Item Code</label>
@@ -177,6 +181,7 @@
             optionLabel="label"
             @complete="searchCustomer"
             :forceSelection="true"
+            :completeOnFocus="true"
             class="w-full"
           />
           <label for="item">Customer</label>

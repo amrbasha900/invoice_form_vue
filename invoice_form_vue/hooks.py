@@ -244,3 +244,9 @@ app_license = "mit"
 
 
 website_route_rules = [{'from_route': '/invoice_form/<path:app_path>', 'to_route': 'invoice_form'},]
+
+fixtures = [
+    {"dt": "Custom Field", "filters": [["name", "in", [
+        "Invoice Form-custom_is_draft",
+        ]]]},
+]
