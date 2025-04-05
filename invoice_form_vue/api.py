@@ -49,7 +49,7 @@ def create_invoice(invoice_data):
                 "has_commission": item.get("has_commission", 0),  # optional cleanup if field still exists
             })
 
-        doc.save(ignore_permissions=True)
+        doc.save(ignore_permissions=False)
         frappe.db.commit()
 
         frappe.logger().info(f"✅ Invoice saved: {doc.name}")
@@ -93,7 +93,7 @@ def get_invoice(invoice_name):
 
 @frappe.whitelist()
 def delete_invoice(invoice_name):
-    frappe.delete_doc("Invoice Form", invoice_name)
+    frappe.delete_doc("Invoice Form", invoice_name, ignore_permissions=False)
     frappe.db.commit()
     return {"status": "deleted"}
 
@@ -103,7 +103,7 @@ def remove_from_invoice(invoice_name):
     doc = frappe.get_doc("Invoice Form", invoice_name)
     if doc.docstatus == 0:
         doc.is_draft = 0
-        doc.save()
+        doc.save(ignore_permissions=False)
         frappe.db.commit()
         return {"status": "submitted"}
     else:
@@ -129,7 +129,8 @@ def get_draft_invoice_form():
                 "supplier_name",
                 "modified"
             ],
-            order_by="modified desc"
+            order_by="modified desc",
+            ignore_permissions=False
         )
 
         # For each invoice, get the items to show the count
@@ -187,7 +188,8 @@ def get_dashboard_data():
                 "modified"
             ],
             order_by="modified desc",
-            limit=10
+            limit=10,
+            ignore_permissions=False
         )
         
         # Add status text and format dates

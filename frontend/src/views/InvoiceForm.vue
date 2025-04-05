@@ -729,7 +729,7 @@ onMounted(async () => {
 /* Ensure PrimeVue input wrappers play nice */
 :deep(.p-autocomplete),
 :deep(.p-inputnumber) {
-    max-width: 500px !important;
+  max-width: 500px !important;
   display: flex;
   width: 100% !important;
   margin-bottom: 10px !important;

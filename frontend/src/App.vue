@@ -48,6 +48,11 @@ const menuItems = ref([
     label: 'Drafts',
     icon: 'pi pi-list',
     command: () => router.push('/drafts')
+  },
+  {
+    label: '',
+    icon: 'pi pi-cog',
+    command: () => router.push('/settings')
   }
 ])
 </script>
