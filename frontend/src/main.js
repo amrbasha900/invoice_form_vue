@@ -37,6 +37,9 @@ import { useConfirm } from 'primevue/useconfirm'
 
 
 
+const storedLang = localStorage.getItem('preferredLang') || 'en'
+
+
 const app = createApp(App);
 const auth = reactive(new Auth());
 

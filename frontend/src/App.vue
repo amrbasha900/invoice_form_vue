@@ -1,6 +1,6 @@
 <template>
 
-  <div class="min-h-screen bg-gray-50">
+  <div :dir="dir" class="min-h-screen bg-gray-50">
         <Toast position="top-right" />
 
     <!-- HEADER -->
@@ -18,7 +18,7 @@
     <!-- MAIN -->
     <main class="py-6">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <router-view />
+        <router-view :key="$route.fullPath" />
       </div>
     </main>
 
@@ -29,15 +29,22 @@
 
 <script setup>
 import { ref,computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+const route = useRoute()
 
 const { t, locale } = useI18n()
 
+const storedLang = localStorage.getItem('preferredLang') || 'en'
+locale.value = storedLang
+
+const dir = computed(() => (locale.value === 'ar' ? 'rtl' : 'ltr'))
+
+// optional, apply it globally too:
 watch(locale, (newLang) => {
-  document.dir = newLang === 'ar' ? 'rtl' : 'ltr'
   document.documentElement.lang = newLang
+  document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr'
 })
 const router = useRouter()
 
@@ -45,22 +52,26 @@ const menuItems = computed(() => [
   {
     label: t('menu.home'),
     icon: 'pi pi-home',
-    command: () => router.push('/')
+    command: () => router.push('/'),
+    class: route.path === '/' ? 'active-menu-item' : ''
   },
   {
     label: t('menu.new_invoice'),
     icon: 'pi pi-plus',
-    command: () => router.push('/invoice')
+    command: () => router.push('/invoice'),
+    class: route.path === '/invoice' ? 'active-menu-item' : ''
   },
   {
     label: t('menu.drafts'),
     icon: 'pi pi-list',
-    command: () => router.push('/drafts')
+    command: () => router.push('/drafts'),
+    class: route.path === '/drafts' ? 'active-menu-item' : ''
   },
   {
     label: '',
     icon: 'pi pi-cog',
-    command: () => router.push('/settings')
+    command: () => router.push('/settings'),
+    class: route.path === '/settings' ? 'active-menu-item' : ''
   }
 ])
 
@@ -69,6 +80,12 @@ const menuItems = computed(() => [
 
 
 <style scoped>
+:deep(.p-menuitem.active-menu-item .p-menuitem-icon) {
+  color: #1d4ed8 !important; /* Same as text */
+  font-weight: bold;
+  font-size: 1.25rem; /* Slightly larger icon */
+}
+
 /* ✅ Make menubar fill 100% and show left/right 1px border */
 :deep(.p-menubar) {
   width: 100% !important;
@@ -90,7 +107,7 @@ const menuItems = computed(() => [
   display: flex !important;
   flex-direction: row !important;
   align-items: center;
-  gap: 1rem !important;
+  gap: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
   background: transparent !important;
@@ -124,7 +141,12 @@ const menuItems = computed(() => [
 :deep(.p-menuitem-icon) {
   margin-right: 0.5rem !important;
 }
-
+:deep(.active-menu-item) {
+  background-color: #eff6ff !important; /* Tailwind blue-50 */
+  color: #1d4ed8 !important;            /* Tailwind blue-700 */
+  font-weight: bold;
+  border-radius: 6px;
+}
 
 /* Mobile toast styles */
 .p-toast {

@@ -115,19 +115,22 @@ const fetchUser = async () => {
   }
 }
 
+
 const changeLang = async (lang) => {
   try {
     selectedLang.value = lang
-    locale.value = lang // change i18n locale
-    document.dir = lang === 'ar' ? 'rtl' : 'ltr' // switch page direction
-await axios.post('/api/method/invoice_form_vue.api.set_user_language', { language: lang })
 
+    // Save language in browser storage
+    localStorage.setItem('preferredLang', lang)
+
+await axios.post('/api/method/invoice_form_vue.api.set_user_language', { language: lang })
     toast.add({ severity: 'success', summary: 'Language Changed', detail: lang.toUpperCase() })
-    location.reload()
+    location.reload()  // Reload to apply changes everywhere
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to change language' })
   }
 }
+
 
 const logout = async () => {
   try {
