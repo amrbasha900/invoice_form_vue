@@ -50,7 +50,7 @@ def create_invoice(invoice_data):
                 "has_commission": item.get("has_commission", 0),  # optional cleanup if field still exists
             })
 
-        doc.save(ignore_permissions=False)
+        doc.save()
         frappe.db.commit()
 
         frappe.logger().info(f"✅ Invoice saved: {doc.name}")

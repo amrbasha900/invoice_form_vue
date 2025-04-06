@@ -556,7 +556,7 @@ const saveInvoice = async (invoiceData) => {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: "Failed to save/update invoice.",
+      detail: `$${err} : Failed to save/update invoice.`,
       life: 2000,
     });
     throw new Error(

@@ -130,7 +130,7 @@ const logout = async () => {
     }, 1000)
 
   } catch (err) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Logout failed' })
+    toast.add({ severity: 'error', summary: 'Error', detail: `$${err} : Logout failed` })
   }
 }
 
