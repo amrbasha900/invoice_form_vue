@@ -4,7 +4,7 @@
       <!-- Display Invoice Name -->
       <div class="mb-4">
         <h3 v-if="invoiceName" class="font-semibold text-lg">
-          Invoice Name: {{ invoiceName }}
+          {{ $t('invoiceName') }}: {{ invoiceName }}
         </h3>
       </div>
       <!-- Two columns on small+ screens -->
@@ -22,10 +22,10 @@
               :completeOnFocus="true"
               class="w-full"
             />
-            <label for="supplier">Supplier</label>
+            <label for="supplier">{{ $t('supplier') }}</label>
           </FloatLabel>
           <span v-if="validationErrors.supplier" class="text-sm text-red-500 validationErrors">
-              Supplier is required
+               {{ $t('supplierIsRequired') }}
             </span>
         </div>
 
@@ -42,7 +42,7 @@
               :completeOnFocus="true"
               class="w-full"
             />
-            <label for="customer">Customer</label>
+            <label for="customer">{{ $t('customer') }}</label>
           </FloatLabel>
         </div>
       </div>
@@ -54,17 +54,17 @@
           responsiveLayout="scroll"
           @row-click="onRowClick"
         >
-          <Column field="item" header="Item" />
-          <Column field="qty" header="Qty" />
-          <Column field="rate" header="Rate" />
-          <Column field="amount" header="Amount">
+          <Column field="item" :header="$t('item')" />
+          <Column field="qty" :header="$t('qty')" />
+          <Column field="rate" :header="$t('rate')" />
+          <Column field="amount" :header="$t('amount')">
             <template #body="slotProps">
               {{ formatCurrency(slotProps.data.amount) }}
             </template>
           </Column>
 
           <!-- Customer (custom render) -->
-          <Column header="Customer">
+          <Column :header="$t('customer')">
             <template #body="slotProps">
               {{ slotProps.data.customer?.label || slotProps.data.customer }}
             </template>
@@ -72,27 +72,27 @@
         </DataTable>
       </div>
       <div class="mt-6">
-        <Button label="Add Item" icon="pi pi-plus" @click="openAddDialog" />
+        <Button :label="$t('addItem')"  icon="pi pi-plus" @click="openAddDialog" />
       </div>
       <!-- Submit -->
       <!-- Buttons: Save, Update, Delete, Submit -->
       <div class="mt-6">
         <Button
           v-if="isInvoiceNew"
-          label="Save Invoice"
+          :label="$t('saveInvoice')" 
           @click="handleSaveInvoice"
           class="w-full"
         />
         <Button
           v-if="!isInvoiceNew"
-          label="Update"
+          :label="$t('update')"
           @click="handleSaveInvoice"
           class="w-full mt-2"
         />
 
         <Button
           v-if="!isInvoiceNew"
-          label="Delete Invoice"
+          :label="$t('deleteInvoice')"
           icon="pi pi-trash"
           severity="danger"
           @click="deleteInvoice"
@@ -101,7 +101,7 @@
 
         <Button
           v-if="!isInvoiceNew"
-          label="Submit Invoice"
+          :label="$t('submitInvoice')"
           icon="pi pi-check"
           severity="success"
           @click="submitInvoice"
@@ -112,7 +112,7 @@
 
     <!-- Add Item Dialog -->
     <Dialog
-      header="Add Item"
+      :header="$t('addItem')"
       v-model:visible="showItemDialog"
       modal
        :dismissableMask="true"
@@ -138,10 +138,10 @@
             :completeOnFocus="true"
             class="w-full"
           />
-          <label for="item">Item Code</label>
+          <label for="item">{{ $t('itemCode') }}</label>
         </FloatLabel>
         <span v-if="validationErrors.item" class="text-sm text-red-500 validationErrors">
-          Item Code is required
+          {{ $t('itemCodeIsRequired') }}
         </span>
         <div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
           <div>
@@ -152,10 +152,10 @@
               class="w-full"
               inputmode="numeric"
             />
-            <label for="qty">Qty</label>
+            <label for="qty">{{ $t('qty') }}</label>
           </FloatLabel>
           <span v-if="validationErrors.qty" class="text-sm text-red-500 validationErrors">
-              Qty is required
+              {{ $t('qtyIsRequired') }}
             </span>
           </div>
           <div>
@@ -166,10 +166,10 @@
               class="w-full"
               inputmode="numeric"
             />
-            <label for="rate">Rate</label>
+            <label for="rate">{{ $t('rate') }}</label>
           </FloatLabel>
 <span v-if="validationErrors.rate" class="text-sm text-red-500 validationErrors">
-              Rate is required
+              {{ $t('rateIsRequired') }}
             </span>
           </div>
           <FloatLabel variant="on" class="w-full">
@@ -181,7 +181,7 @@
               mode="currency"
               currency="SAR"
             />
-            <label for="amount">Total Amount</label>
+            <label for="amount">{{ $t('totalAmount') }}</label>
           </FloatLabel>
         </div>
         <FloatLabel variant="on" class="w-full block">
@@ -195,21 +195,21 @@
             :completeOnFocus="true"
             class="w-full"
           />
-          <label for="item">Customer</label>
+          <label for="Customer">{{ $t('customer') }}</label>
         </FloatLabel>
 <span v-if="validationErrors.customer" class="text-sm text-red-500 validationErrors">
-              Customer is required
+             {{ $t('customerIsRequired') }}
             </span>
         <div class="flex flex-wrap items-center justify-center gap-10">
           <Button
-            :label="editIndex !== null ? 'Update' : 'Add'"
+            :label="editIndex !== null ? $t('update') : $t('add')"
             @click="saveItem"
             class="w-full my-50px"
           />
           <div class="h-3"></div>
           <Button
             v-if="editIndex !== null"
-            label="Delete"
+            :label="$t('delete')"
             icon="pi pi-trash"
             severity="danger"
             @click="handleDelete"

@@ -6,7 +6,7 @@
     <!-- HEADER -->
     <header class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Menubar :model="menuItems" class="border-0 custom-menubar">
+        <Menubar :model="menuItems" :key="locale" class="border-0 custom-menubar">
           <template #start>
             <router-link to="/" class="font-bold text-xl text-blue-600 mr-4">
             </router-link>
@@ -28,24 +28,32 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref,computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t, locale } = useI18n()
+
+watch(locale, (newLang) => {
+  document.dir = newLang === 'ar' ? 'rtl' : 'ltr'
+  document.documentElement.lang = newLang
+})
 const router = useRouter()
 
-const menuItems = ref([
+const menuItems = computed(() => [
   {
-    label: 'Home',
+    label: t('menu.home'),
     icon: 'pi pi-home',
     command: () => router.push('/')
   },
   {
-    label: 'New',
+    label: t('menu.new_invoice'),
     icon: 'pi pi-plus',
     command: () => router.push('/invoice')
   },
   {
-    label: 'Drafts',
+    label: t('menu.drafts'),
     icon: 'pi pi-list',
     command: () => router.push('/drafts')
   },
@@ -55,6 +63,8 @@ const menuItems = ref([
     command: () => router.push('/settings')
   }
 ])
+
+
 </script>
 
 

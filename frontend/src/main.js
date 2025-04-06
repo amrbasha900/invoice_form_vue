@@ -1,6 +1,8 @@
 import { createApp, reactive } from "vue";
 import App from "./App.vue";
 import router from './router';
+import i18n from './i18n.js'
+
 import './style.css'
 import "./flags.css";
 
@@ -40,6 +42,7 @@ const auth = reactive(new Auth());
 
 app.use(router);
 
+app.use(i18n)
 
 app.provide("$auth", auth);
 app.provide("$call", call);

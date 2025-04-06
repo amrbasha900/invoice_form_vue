@@ -221,3 +221,14 @@ def get_app_translations():
 		language = frappe.db.get_single_value("System Settings", "language")
 
 	return language
+
+
+@frappe.whitelist()
+def set_user_language(language):
+    user = frappe.session.user
+    if not language:
+        frappe.throw("Language not specified")
+
+    frappe.db.set_value("User", user, "language", language)
+    frappe.clear_cache(user=user)
+    return {"status": "success", "language": language}

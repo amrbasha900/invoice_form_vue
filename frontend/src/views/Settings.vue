@@ -37,7 +37,7 @@
     <div class="settings-card">
       <div class="card-header">
         <i class="pi pi-globe icon text-green-600" />
-        <span>Language</span>
+        <span>{{$t('language')}}</span>
       </div>
       <div class="card-body flex gap-3 flex-wrap">
         <Button 
@@ -47,7 +47,7 @@
           @click="changeLang('en')"
         />
         <Button 
-          label="Arabic"
+          label="العربية"
           icon="pi pi-globe"
           :class="{ 'p-button-outlined': selectedLang !== 'ar' }"
           @click="changeLang('ar')"
@@ -59,12 +59,12 @@
     <div class="settings-card">
       <div class="card-header">
         <i class="pi pi-sign-out icon text-red-500" />
-        <span>Logout</span>
+        <span>{{$t('logoutMain')}}</span>
       </div>
       <div class="card-body">
         <div class="flex flex-wrap items-center justify-center gap-10">
         <Button 
-          label="Move to ERPNext" 
+          :label="$t('moveToErp')" 
           icon="pi pi-th-large"
           severity="info"
             class="w-full my-50px"
@@ -72,7 +72,7 @@
         />
         <div class="h-3"></div>
         <Button 
-          label="Logout" 
+          :label="$t('logout')" 
           icon="pi pi-power-off"
           severity="danger"
             class="w-full my-50px"
@@ -87,6 +87,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { useI18n } from 'vue-i18n'
+
+const { locale } = useI18n()
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 
@@ -101,6 +104,12 @@ const fetchUser = async () => {
     const userEmail = res.data.message
     const userRes = await axios.get(`/api/resource/User/${userEmail}`)
     user.value = userRes.data.data
+
+    // ✅ Apply user's preferred language
+    const userLang = user.value.language || 'en'
+    selectedLang.value = userLang
+    locale.value = userLang
+    document.dir = userLang === 'ar' ? 'rtl' : 'ltr'
   } catch (err) {
     toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to load user info' })
   }
@@ -109,7 +118,10 @@ const fetchUser = async () => {
 const changeLang = async (lang) => {
   try {
     selectedLang.value = lang
-    await axios.post('/api/method/frappe.translate.set_user_language', { language: lang })
+    locale.value = lang // change i18n locale
+    document.dir = lang === 'ar' ? 'rtl' : 'ltr' // switch page direction
+await axios.post('/api/method/invoice_form_vue.api.set_user_language', { language: lang })
+
     toast.add({ severity: 'success', summary: 'Language Changed', detail: lang.toUpperCase() })
     location.reload()
   } catch (err) {

@@ -1,59 +1,59 @@
 <template>
   <div>
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-      <p class="text-gray-600 mt-1">Welcome to your invoice management system</p>
+      <h1 class="text-2xl font-bold text-gray-900">{{$t('dashboard')}}</h1>
+      <p class="text-gray-600 mt-1">{{$t('dashboardWellcom')}}</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <!-- Draft Invoices Card -->
       <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Draft Invoices</h2>
+          <h2 class="text-lg font-semibold">{{$t('draftInvoices')}}</h2>
           <div class="p-2 bg-blue-100 text-blue-800 rounded-full">
             <i class="pi pi-file-o"></i>
           </div>
         </div>
         <div class="text-3xl font-bold">{{ stats.draftCount || 0 }}</div>
-        <div class="mt-2 text-sm text-gray-500">Pending invoices</div>
+        <div class="mt-2 text-sm text-gray-500">{{$t('pendingInvoices')}}</div>
         <div class="mt-4">
-          <Button label="View Drafts" icon="pi pi-eye" @click="$router.push('/drafts')" class="p-button-text" />
+          <Button :label="$t('viewDrafts')" icon="pi pi-eye" @click="$router.push('/drafts')" class="p-button-text" />
         </div>
       </div>
 
       <!-- Submitted Invoices Card -->
       <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Submitted Invoices</h2>
+          <h2 class="text-lg font-semibold">{{$t('submittedInvoices')}}</h2>
           <div class="p-2 bg-green-100 text-green-800 rounded-full">
             <i class="pi pi-check-circle"></i>
           </div>
         </div>
         <div class="text-3xl font-bold">{{ stats.submittedCount || 0 }}</div>
-        <div class="mt-2 text-sm text-gray-500">Completed invoices</div>
+        <div class="mt-2 text-sm text-gray-500">{{$t('completedInvoices')}}</div>
         <div class="mt-4">
-          <Button label="View Submitted" icon="pi pi-eye" class="p-button-text" />
+          <Button :label="$t('viewSubmitted')" icon="pi pi-eye" class="p-button-text" />
         </div>
       </div>
 
       <!-- Quick Actions Card -->
       <div class="bg-white shadow rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">Quick Actions</h2>
+          <h2 class="text-lg font-semibold">{{$t('quickActions')}}</h2>
           <div class="p-2 bg-purple-100 text-purple-800 rounded-full">
             <i class="pi pi-bolt"></i>
           </div>
         </div>
         <div class="space-y-3">
-          <Button label="Create New Invoice" icon="pi pi-plus" @click="$router.push('/invoice')" class="w-full" />
-          <Button label="View Draft Invoices" icon="pi pi-file-o" @click="$router.push('/drafts')" class="w-full p-button-outlined" />
+          <Button :label="$t('createNewInvoice')" icon="pi pi-plus" @click="$router.push('/invoice')" class="w-full" />
+          <Button :label="$t('viewDraftInvoices')" icon="pi pi-file-o" @click="$router.push('/drafts')" class="w-full p-button-outlined" />
         </div>
       </div>
     </div>
 
     <!-- Recent Activity -->
     <div class="bg-white shadow rounded-lg p-6 mb-8">
-      <h2 class="text-lg font-semibold mb-4">Recent Activity</h2>
+      <h2 class="text-lg font-semibold mb-4">{{$t('recentActivity')}}</h2>
       
       <div v-if="loading" class="flex justify-center my-6">
         <i class="pi pi-spin pi-spinner text-2xl"></i>
@@ -61,27 +61,27 @@
       
       <div v-else-if="recentInvoices.length > 0" class="overflow-x-auto">
         <DataTable :value="recentInvoices" class="p-datatable-sm" responsiveLayout="scroll">
-          <Column field="name" header="Invoice ID">
+          <Column field="name" :header="$t('invoiceID')">
             <template #body="slotProps">
               <router-link :to="`/invoice?invoice_name=${slotProps.data.name}`" class="text-primary-600 hover:underline">
                 {{ slotProps.data.name }}
               </router-link>
             </template>
           </Column>
-          <Column field="posting_date" header="Date">
+          <Column field="posting_date" :header="$t('date')">
             <template #body="slotProps">
               {{ formatDate(slotProps.data.posting_date) }}
             </template>
           </Column>
-          <Column field="customer_name" header="Customer" />
-          <Column field="supplier_name" header="Supplier" />
-          <Column field="status" header="Status">
+          <Column field="customer_name" :header="$t('customer')" />
+          <Column field="supplier_name" :header="$t('supplier')" />
+          <Column field="status" :header="$t('status')">
             <template #body="slotProps">
               <Tag :value="slotProps.data.status" 
                   :severity="slotProps.data.status === 'Draft' ? 'warning' : 'success'" />
             </template>
           </Column>
-          <Column header="Actions" bodyStyle="text-align:center">
+          <Column :header="$t('actions')" bodyStyle="text-align:center">
             <template #body="slotProps">
               <Button icon="pi pi-eye" class="p-button-rounded p-button-text p-button-sm" 
                      @click="$router.push(`/invoice?invoice_name=${slotProps.data.name}`)" />
@@ -91,7 +91,7 @@
       </div>
       
       <div v-else class="text-center py-4 text-gray-500">
-        No recent activity found
+        {{$t('noRecentActivityFound')}}
       </div>
     </div>
   </div>

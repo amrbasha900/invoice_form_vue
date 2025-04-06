@@ -28,15 +28,15 @@
                       {{ item.name }}
                     </div>
                     <div class="text-gray-500 mb-0.5">
-                      <i class="pi pi-calendar mr-1" /> <b>Date:</b>
+                      <i class="pi pi-calendar mr-1" /> <b>{{$t('date')}} :</b>
                       {{ item.posting_date || "N/A" }}
                     </div>
                     <div class="text-gray-500 mb-0.5">
-                      <i class="pi pi-truck mr-1" /> <b>Supplier:</b>
+                      <i class="pi pi-truck mr-1" /> <b>{{$t('supplier')}} :</b>
                       {{ item.supplier_name || "N/A" }}
                     </div>
                     <div class="text-gray-400">
-                      <i class="pi pi-list mr-1" /> <b>Items:</b>
+                      <i class="pi pi-list mr-1" /> <b>{{$t('itemsDraft')}} :</b>
                       {{ item.items?.length || 0 }}
                     </div>
                   </div>
@@ -46,7 +46,7 @@
                   <div class="sm:text-right w-full sm:w-auto">
                     <Button
                       icon="pi pi-eye"
-                      label="View"
+                      :label="$t('view')"
                       class="flex-auto md:flex-initial whitespace-nowrap"
                       @click="viewInvoice(item)"
                     />
@@ -59,7 +59,8 @@
       </DataView>
 
       <div v-else class="text-center text-gray-500 mt-10">
-        No draft invoices available.
+        {{ $t('noDraftInvoicesAvailable') }}
+         
       </div>
     </div>
   </div>
