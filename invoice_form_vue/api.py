@@ -51,6 +51,7 @@ def create_invoice(invoice_data):
             })
 
         doc.save()
+        
         frappe.db.commit()
 
         frappe.logger().info(f"✅ Invoice saved: {doc.name}")
