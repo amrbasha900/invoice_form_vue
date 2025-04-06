@@ -2,6 +2,7 @@
 import frappe
 import json
 from frappe import _
+import frappe.translate
 
 @frappe.whitelist()
 def get_suppliers_and_customers():
@@ -119,7 +120,7 @@ def get_draft_invoice_form():
         # Get all draft invoices
         invoices = frappe.get_all(
             "Invoice Form",  # Use your actual doctype name here
-            filters={"docstatus": 0, 'is_draft':1},  # docstatus 0 means draft
+            filters={"docstatus": 0, 'is_draft':1, 'owner': frappe.session.user},  # docstatus 0 means draft
             fields=[
                 "name", 
                 "posting_date", 
@@ -176,7 +177,8 @@ def get_dashboard_data():
         
         # Get recent invoices (both draft and submitted)
         recent_invoices = frappe.get_all(
-            "Invoice Form",  # Use your actual doctype name
+            "Invoice Form",
+            filters={ 'owner': frappe.session.user}  ,  # Use your actual doctype name
             fields=[
                 "name", 
                 "posting_date", 
@@ -209,3 +211,12 @@ def get_dashboard_data():
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), _("Failed to fetch dashboard data"))
         frappe.throw(_("Failed to fetch dashboard data: {0}").format(str(e)))
+
+@frappe.whitelist(allow_guest=True)
+def get_app_translations():
+	if frappe.session.user != "Guest":
+		language = frappe.db.get_value("User", frappe.session.user, "language")
+	else:
+		language = frappe.db.get_single_value("System Settings", "language")
+
+	return language
