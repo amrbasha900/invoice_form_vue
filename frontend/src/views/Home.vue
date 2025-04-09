@@ -52,7 +52,7 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="bg-white shadow rounded-lg p-6 mb-8">
+    <!-- <div class="bg-white shadow rounded-lg p-6 mb-8">
       <h2 class="text-lg font-semibold mb-4">{{$t('recentActivity')}}</h2>
       
       <div v-if="loading" class="flex justify-center my-6">
@@ -93,7 +93,7 @@
       <div v-else class="text-center py-4 text-gray-500">
         {{$t('noRecentActivityFound')}}
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

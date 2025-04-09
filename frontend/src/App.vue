@@ -37,14 +37,13 @@ const route = useRoute()
 const { t, locale } = useI18n()
 
 const storedLang = localStorage.getItem('preferredLang') || 'en'
-locale.value = storedLang
 
 const dir = computed(() => (locale.value === 'ar' ? 'rtl' : 'ltr'))
 
 // optional, apply it globally too:
-watch(locale, (newLang) => {
-  document.documentElement.lang = newLang
-  document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr'
+watch(locale, (lang) => {
+  document.documentElement.lang = lang
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
 })
 const router = useRouter()
 

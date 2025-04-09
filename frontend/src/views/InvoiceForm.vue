@@ -746,4 +746,8 @@ onMounted(async () => {
   font-size: 12px;
   color: red;
 }
+
+[dir="rtl"] .p-autocomplete-option {
+  text-align: right;
+}
 </style>
