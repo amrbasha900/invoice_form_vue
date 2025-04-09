@@ -6,9 +6,9 @@ import frappe.translate
 
 @frappe.whitelist()
 def get_suppliers_and_customers():
-    suppliers = frappe.get_all("Supplier", fields=["name", "supplier_name"])
-    customers = frappe.get_all("Customer", filters={'is_customer':1, 'is_frozen':0},fields=["name", "customer_name"])
-    items = frappe.get_all("Item", filters={'commission_item':0},fields=["name", "item_name"])
+    suppliers = frappe.get_list("Supplier", fields=["name", "supplier_name"])
+    customers = frappe.get_list("Customer", filters={'is_customer':1, 'is_frozen':0},fields=["name", "customer_name"])
+    items = frappe.get_list("Item", filters={'commission_item':0},fields=["name", "item_name"])
     return {
         "suppliers": suppliers,
         "customers": customers,
