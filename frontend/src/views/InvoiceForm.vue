@@ -664,10 +664,42 @@ const loadInvoice = async (invoiceNameParam) => {
     });
   }
 };
-
+function fixDropdownWidth() {
+  // Create a style element if it doesn't exist
+  let styleEl = document.getElementById('autocomplete-dropdown-fix');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'autocomplete-dropdown-fix';
+    document.head.appendChild(styleEl);
+    
+    // Add the CSS rules that directly target the problem
+    styleEl.innerHTML = `
+      /* Override the min-width that's causing the issue */
+      .p-autocomplete-overlay {
+        max-width: 100vw !important;
+      }
+      
+      /* Make sure dropdown items wrap text */
+      .p-autocomplete-option {
+        white-space: normal !important;
+        word-break: break-word !important;
+        line-height: 1.4 !important;
+      }
+      
+      /* For smaller screens, make even tighter */
+      @media screen and (max-width: 640px) {
+        .p-autocomplete-overlay {
+          max-width: 90vw !important;
+          width: auto !important;
+        }
+      }
+    `;
+  }
+}
 // Load all options
 onMounted(async () => {
   try {
+    fixDropdownWidth()
     const response = await axios.get(
       "/api/method/invoice_form_vue.api.get_suppliers_and_customers"
     );
@@ -749,5 +781,8 @@ onMounted(async () => {
 
 [dir="rtl"] .p-autocomplete-option {
   text-align: right;
+}
+.p-autocomplete-overlay {
+  max-width: 200px !important;
 }
 </style>
