@@ -30,7 +30,11 @@ def create_invoice(invoice_data):
             if not data.get("invoice_id")
             else frappe.get_doc("Invoice Form", data["invoice_id"])
         )
-
+        pamper = None
+        if not data.get("invoice_id"):
+            pamper = frappe.db.get_value("Customer", {'pamper_user': frappe.session.user}, "name")
+            if pamper:
+                doc.pamper = pamper
         doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
         doc.posting_date = data.get("posting_date")
 
@@ -48,6 +52,7 @@ def create_invoice(invoice_data):
                 "total":item["rate"] * item["qty"],
                 "customer": item.get("customer", {}).get("code") if isinstance(item.get("customer"), dict) else item.get("customer"),
                 "has_commission": item.get("has_commission", 0),  # optional cleanup if field still exists
+                "pamper": pamper
             })
 
         doc.save()

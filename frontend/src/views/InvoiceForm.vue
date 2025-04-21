@@ -223,7 +223,7 @@
 
 <script setup>
 import { reactive, ref, onMounted, watch , computed} from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, onBeforeRouteLeave } from "vue-router";
 const route = useRoute();
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
@@ -253,6 +253,7 @@ const newItem = reactive({
   amount: null,
   customer: "",
 });
+const isDirty = ref(false);
 
 // Calculate amount when qty or rate changes
 const calculateAmount = () => {
@@ -495,6 +496,7 @@ const handleDelete = () => {
         life: 2000,
       });
       resetDialog();
+      isDirty.value = false;
       showItemDialog.value = false;
     },
     reject: () => {
@@ -533,6 +535,7 @@ const handleSaveInvoice = async () => {
     });
 
     isInvoiceNew.value = false; // Mark as existing invoice
+    isDirty.value = false;
   } catch (error) {
     // Show error in toast if API returns an error message
     toast.add({ severity: "error", summary: "Error", detail: error.message });
@@ -587,6 +590,7 @@ const deleteInvoice = async () => {
           life: 2000,
         });
         resetInvoiceForm();
+        isDirty.value = false;
       },
     });
   } catch (error) {
@@ -612,6 +616,7 @@ const submitInvoice = async () => {
       life: 2000,
     });
     resetInvoiceForm();
+    isDirty.value = false;
   } catch (error) {
     toast.add({
       severity: "error",
@@ -696,7 +701,27 @@ function fixDropdownWidth() {
     `;
   }
 }
-// Load all options
+
+watch(
+  () => [invoice.supplier, invoice.customer, invoice.items],
+  () => {
+    isDirty.value = true;
+  },
+  { deep: true }
+);
+onBeforeRouteLeave((to, from, next) => {
+  if (isDirty.value) {
+    const answer = window.confirm("You have unsaved changes. Do you really want to leave?");
+    if (answer) {
+      next(); // Allow navigation
+    } else {
+      next(false); // Cancel navigation
+    }
+  } else {
+    next(); // No changes, safe to leave
+  }
+});
+
 onMounted(async () => {
   try {
     fixDropdownWidth()
