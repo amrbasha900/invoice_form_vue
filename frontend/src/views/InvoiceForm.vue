@@ -10,50 +10,66 @@
       <!-- Two columns on small+ screens -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <!-- Supplier -->
-        <div class="w-full">
-          <FloatLabel variant="on" class="w-full block">
-            <AutoComplete
-              v-model="invoice.supplier"
-              inputId="supplier"
-              :suggestions="supplierSuggestions"
-              optionLabel="label"
-              @complete="searchSupplier"
-              :forceSelection="true"
-              :completeOnFocus="true"
-              class="w-full"
-            />
-            <label for="supplier">{{ $t('supplier') }}</label>
-          </FloatLabel>
-          <span v-if="validationErrors.supplier" class="text-sm text-red-500 validationErrors">
-               {{ $t('supplierIsRequired') }}
-            </span>
-        </div>
-
+        <!-- Supplier field with grid layout and red active trash button -->
+<div class="w-full">
+  <div class="grid grid-cols-12 gap-1">
+    <div class="col-span-11">
+      <FloatLabel variant="on" class="w-full block">
+        <AutoComplete
+          v-model="invoice.supplier"
+          inputId="supplier"
+          :suggestions="supplierSuggestions"
+          optionLabel="label"
+          @complete="searchSupplier"
+          :forceSelection="true"
+          :completeOnFocus="true"
+          class="w-full"
+        />
+        <label for="supplier">{{ $t('supplier') }}</label>
+      </FloatLabel>
+    </div>
+    <div class="col-span-1 flex items-center justify-center">
+      <Button 
+        icon="pi pi-trash" 
+        :class="[
+          'p-button-rounded p-button-text',
+          invoice.supplier ? 'p-button-danger' : ''
+        ]"
+        @click="clearSupplier"
+        type="button"
+        aria-label="Clear supplier"
+        :disabled="!invoice.supplier"
+      />
+    </div>
+  </div>
+  <span v-if="validationErrors.supplier" class="text-sm text-red-500 validationErrors">
+    {{ $t('supplierIsRequired') }}
+  </span>
+</div>
         <!-- Customer -->
         <div class="w-full">
-          <FloatLabel variant="on" class="w-full block">
-            <AutoComplete
-              v-model="invoice.customer"
-              inputId="customer"
-              :suggestions="customerSuggestions"
-              optionLabel="label"
-              @complete="searchCustomer"
-              :forceSelection="true"
-              :completeOnFocus="true"
-              class="w-full"
-            />
-            <label for="customer">{{ $t('customer') }}</label>
-          </FloatLabel>
+          <div class="grid grid-cols-12 gap-1">
+            <div class="col-span-11">
+              <FloatLabel variant="on" class="w-full block">
+                <AutoComplete v-model="invoice.customer" inputId="customer" :suggestions="customerSuggestions"
+                  optionLabel="label" @complete="searchCustomer" :forceSelection="true" :completeOnFocus="true"
+                  class="w-full" />
+                <label for="customer">{{ $t('customer') }}</label>
+              </FloatLabel>
+            </div>
+            <div class="col-span-1 flex items-center justify-center">
+              <Button icon="pi pi-trash" :class="[
+          'p-button-rounded p-button-text',
+          invoice.customer ? 'p-button-danger' : ''
+        ]" @click="clearMainCustomer" type="button"
+                aria-label="Clear customer" :disabled="!invoice.customer" />
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="mt-6">
-        <DataTable
-          :value="invoice.items"
-          class="w-full mt-6 text-lg"
-          responsiveLayout="scroll"
-          @row-click="onRowClick"
-        >
+        <DataTable :value="invoice.items" class="w-full mt-6 text-lg" responsiveLayout="scroll" @row-click="onRowClick">
           <Column field="item" :header="$t('item')" />
           <Column field="qty" :header="$t('qty')" />
           <Column field="rate" :header="$t('rate')" />
@@ -72,72 +88,35 @@
         </DataTable>
       </div>
       <div class="mt-6">
-        <Button :label="$t('addItem')"  icon="pi pi-plus" @click="openAddDialog" />
+        <Button :label="$t('addItem')" icon="pi pi-plus" @click="openAddDialog" />
       </div>
       <!-- Submit -->
       <!-- Buttons: Save, Update, Delete, Submit -->
       <div class="mt-6">
-        <Button
-          v-if="isInvoiceNew"
-          :label="$t('saveInvoice')" 
-          @click="handleSaveInvoice"
-          class="w-full"
-        />
-        <Button
-          v-if="!isInvoiceNew"
-          :label="$t('update')"
-          @click="handleSaveInvoice"
-          class="w-full mt-2"
-        />
+        <Button v-if="isInvoiceNew" :label="$t('saveInvoice')" @click="handleSaveInvoice" class="w-full" />
+        <Button v-if="!isInvoiceNew" :label="$t('update')" @click="handleSaveInvoice" class="w-full mt-2" />
 
-        <Button
-          v-if="!isInvoiceNew"
-          :label="$t('deleteInvoice')"
-          icon="pi pi-trash"
-          severity="danger"
-          @click="deleteInvoice"
-          class="w-full mt-2"
-        />
+        <Button v-if="!isInvoiceNew" :label="$t('deleteInvoice')" icon="pi pi-trash" severity="danger"
+          @click="deleteInvoice" class="w-full mt-2" />
 
-        <Button
-          v-if="!isInvoiceNew"
-          :label="$t('submitInvoice')"
-          icon="pi pi-check"
-          severity="success"
-          @click="submitInvoice"
-          class="w-full mt-2"
-        />
+        <Button v-if="!isInvoiceNew" :label="$t('submitInvoice')" icon="pi pi-check" severity="success"
+          @click="submitInvoice" class="w-full mt-2" />
       </div>
     </form>
 
     <!-- Add Item Dialog -->
-    <Dialog
-      :header="$t('addItem')"
-      v-model:visible="showItemDialog"
-      modal
-       :dismissableMask="true"
-      :style="{
+    <Dialog :header="$t('addItem')" v-model:visible="showItemDialog" modal :dismissableMask="true" :style="{
         width: '100%',
         maxWidth: '400px',
         position: 'fixed',
         top: '2%',
         left: '50%',
         transform: 'translateX(-50%)',
-      }"
-      :breakpoints="{ '960px': '95vw', '640px': '100vw' }"
-    >
+      }" :breakpoints="{ '960px': '95vw', '640px': '100vw' }">
       <div class="mt-1">
         <FloatLabel variant="on" class="w-full block">
-          <AutoComplete
-            v-model="newItem.item"
-            inputId="item"
-            :suggestions="itemSuggestions"
-            optionLabel="label"
-            @complete="searchItem"
-            :forceSelection="true"
-            :completeOnFocus="true"
-            class="w-full"
-          />
+          <AutoComplete v-model="newItem.item" inputId="item" :suggestions="itemSuggestions" optionLabel="label"
+            @complete="searchItem" :forceSelection="true" :completeOnFocus="true" class="w-full" />
           <label for="item">{{ $t('itemCode') }}</label>
         </FloatLabel>
         <span v-if="validationErrors.item" class="text-sm text-red-500 validationErrors">
@@ -145,76 +124,84 @@
         </span>
         <div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
           <div>
-          <FloatLabel variant="on">
-            <InputText
-              v-model="qtyInput"
-              inputId="qty"
-              class="w-full"
-              inputmode="numeric"
-            />
-            <label for="qty">{{ $t('qty') }}</label>
-          </FloatLabel>
-          <span v-if="validationErrors.qty" class="text-sm text-red-500 validationErrors">
+            <FloatLabel variant="on">
+              <InputText
+    v-model="qtyInput"
+    inputId="qty"
+    class="w-full"
+    inputmode="decimal"
+    type="text"
+    pattern="[0-9]*[.,]?[0-9]*"
+  />
+              <label for="qty">{{ $t('qty') }}</label>
+            </FloatLabel>
+            <span v-if="validationErrors.qty" class="text-sm text-red-500 validationErrors">
               {{ $t('qtyIsRequired') }}
             </span>
           </div>
           <div>
-          <FloatLabel variant="on">
-            <InputText
-              v-model="rateInput"
-              inputId="rate"
-              class="w-full"
-              inputmode="numeric"
-            />
-            <label for="rate">{{ $t('rate') }}</label>
-          </FloatLabel>
-<span v-if="validationErrors.rate" class="text-sm text-red-500 validationErrors">
+            <FloatLabel variant="on">
+              <InputText
+                v-model="rateInput"
+                inputId="rate"
+                class="w-full"
+                inputmode="decimal"
+                type="text"
+                pattern="[0-9]*[.,]?[0-9]*"
+                
+              />
+              <label for="rate">{{ $t('rate') }}</label>
+            </FloatLabel>
+            <span v-if="validationErrors.rate" class="text-sm text-red-500 validationErrors">
               {{ $t('rateIsRequired') }}
             </span>
           </div>
           <FloatLabel variant="on" class="w-full">
-            <InputText
-              v-model="newItem.amount"
-              inputId="amount"
-              class="w-full"
-              :disabled="true"
-              mode="currency"
-              currency="SAR"
-            />
+            <InputText v-model="newItem.amount" inputId="amount" class="w-full" :disabled="true" mode="currency"
+              currency="SAR" />
             <label for="amount">{{ $t('totalAmount') }}</label>
           </FloatLabel>
         </div>
-        <FloatLabel variant="on" class="w-full block">
-          <AutoComplete
-            v-model="newItem.customer"
-            inputId="Customer"
-            :suggestions="customerSuggestions"
-            optionLabel="label"
-            @complete="searchCustomer"
-            :forceSelection="true"
-            :completeOnFocus="true"
-            class="w-full"
-          />
-          <label for="Customer">{{ $t('customer') }}</label>
-        </FloatLabel>
-<span v-if="validationErrors.customer" class="text-sm text-red-500 validationErrors">
-             {{ $t('customerIsRequired') }}
-            </span>
+        <div class="w-full">
+  <div class="grid grid-cols-12 gap-1">
+    <div class="col-span-11">
+      <FloatLabel variant="on" class="w-full block">
+        <AutoComplete
+          v-model="newItem.customer"
+          inputId="Customer"
+          :suggestions="customerSuggestions"
+          optionLabel="label"
+          @complete="searchCustomer"
+          :forceSelection="true"
+          :completeOnFocus="true"
+          class="w-full"
+        />
+        <label for="Customer">{{ $t('customer') }}</label>
+      </FloatLabel>
+    </div>
+    <div class="col-span-1 flex items-center justify-center">
+      <Button 
+        icon="pi pi-trash" 
+        :class="[
+          'p-button-rounded p-button-text',
+          newItem.customer ? 'p-button-danger' : ''
+        ]" 
+        @click="clearCustomer"
+        type="button"
+        aria-label="Clear customer"
+        :disabled="!newItem.customer"
+      />
+    </div>
+  </div>
+  <span v-if="validationErrors.customer" class="text-sm text-red-500 validationErrors">
+    {{ $t('customerIsRequired') }}
+  </span>
+</div>
         <div class="flex flex-wrap items-center justify-center gap-10">
-          <Button
-            :label="editIndex !== null ? $t('update') : $t('add')"
-            @click="saveItem"
-            class="w-full my-50px"
-          />
+          <Button :label="editIndex !== null ? $t('update') : $t('add')" @click="saveItem" class="w-full my-50px" />
           <div class="h-3"></div>
-          <Button
-            v-if="editIndex !== null"
-            :label="$t('delete')"
-            icon="pi pi-trash"
-            severity="danger"
-            @click="handleDelete"
-            class="w-full"
-          />
+          <Button v-if="editIndex !== null" :label="$t('delete')" icon="pi pi-trash" severity="danger"
+            @click="handleDelete" class="w-full" />
         </div>
       </div>
     </Dialog>
@@ -257,7 +244,11 @@ const isDirty = ref(false);
 
 // Calculate amount when qty or rate changes
 const calculateAmount = () => {
-  newItem.amount = (newItem.qty || 0) * (newItem.rate || 0);
+  // Calculate raw amount
+  const rawAmount = (newItem.qty || 0) * (newItem.rate || 0);
+  
+  // Format to 2 decimal places using toFixed and convert back to number
+  newItem.amount = parseFloat(rawAmount.toFixed(2));
 };
 
 // Format currency for display
@@ -269,36 +260,72 @@ const formatCurrency = (value) => {
 };
 
 //Handle Arabic Numbers
+// Updated rateInput computed property with deletion support
 const rateInput = computed({
   get() {
-    // Return current value as string
     return newItem.rate === 0 && !newItem.rateEditing ? '' : newItem.rate.toString();
   },
   set(value) {
-    // Flag to track if we're editing (to handle empty state better)
     newItem.rateEditing = true;
     
-    // Handle Arabic numerals
-    const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
-      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
-    });
-    
-    // If empty, set to 0 but keep track that we're editing
-    if (westernValue === '') {
+    // If the field is being cleared (empty or just a decimal point), allow it
+    if (value === '' || value === '.' || value === '،' || value === '٫') {
       newItem.rate = 0;
       calculateAmount();
       return;
     }
     
-    // Only update if it's a valid number
-    const numValue = parseFloat(westernValue);
-    if (!isNaN(numValue)) {
-      newItem.rate = numValue;
-      calculateAmount();
+    // First replace all Arabic numerals with Western numerals
+    let westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
+      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
+    });
+    
+    // Replace Arabic decimal separators with Western decimal point
+    westernValue = westernValue.replace(/[،٫]/g, '.');
+    
+    // In case a user enters mixed characters, ensure only digits and decimal points remain
+    westernValue = westernValue.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = westernValue.split('.');
+    if (parts.length > 2) {
+      westernValue = parts[0] + '.' + parts.slice(1).join('');
     }
+    
+    // Only update if it's a valid number or an empty string (for deletion)
+    if (westernValue === '') {
+      newItem.rate = 0;
+    } else {
+      const numValue = parseFloat(westernValue);
+      if (!isNaN(numValue)) {
+        newItem.rate = numValue;
+      }
+    }
+    
+    calculateAmount();
   }
 });
+
+
+
+const clearSupplier = () => {
+  invoice.supplier = "";
+  // Mark the form as dirty since we made a change
+  isDirty.value = true;
+};
+const clearCustomer = () => {
+  newItem.customer = "";
+};
+
+const clearMainCustomer = () => {
+  invoice.customer = "";
+  // Mark the form as dirty since we made a change
+  isDirty.value = true;
+};
+
 // Also need to do the same for qty
+// Updated qtyInput computed property with comprehensive Arabic handling
+// Updated qtyInput computed property with deletion support
 const qtyInput = computed({
   get() {
     return newItem.qty === 0 && !newItem.qtyEditing ? '' : newItem.qty.toString();
@@ -306,21 +333,41 @@ const qtyInput = computed({
   set(value) {
     newItem.qtyEditing = true;
     
-    const westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
-      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
-    });
-    
-    if (westernValue === '') {
+    // If the field is being cleared (empty or just a decimal point), allow it
+    if (value === '' || value === '.' || value === '،' || value === '٫') {
       newItem.qty = 0;
       calculateAmount();
       return;
     }
     
-    const numValue = parseFloat(westernValue);
-    if (!isNaN(numValue)) {
-      newItem.qty = numValue;
-      calculateAmount();
+    // First replace all Arabic numerals with Western numerals
+    let westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
+      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
+    });
+    
+    // Replace Arabic decimal separators with Western decimal point
+    westernValue = westernValue.replace(/[،٫]/g, '.');
+    
+    // In case a user enters mixed characters, ensure only digits and decimal points remain
+    westernValue = westernValue.replace(/[^\d.]/g, '');
+    
+    // Handle multiple decimal points (keep only the first one)
+    const parts = westernValue.split('.');
+    if (parts.length > 2) {
+      westernValue = parts[0] + '.' + parts.slice(1).join('');
     }
+    
+    // Only update if it's a valid number or an empty string (for deletion)
+    if (westernValue === '') {
+      newItem.qty = 0;
+    } else {
+      const numValue = parseFloat(westernValue);
+      if (!isNaN(numValue)) {
+        newItem.qty = numValue;
+      }
+    }
+    
+    calculateAmount();
   }
 });
 
@@ -425,8 +472,11 @@ const onRowClick = (event) => {
 };
 
 // Save item (add or update)
-const saveItem = () => {
+// Updated saveItem function with auto-save logic
+const saveItem = async () => {
   if (!validateDialog()) return;
+  
+  // Create item data object from form
   const itemData = {
     item: newItem.item.code,
     qty: newItem.qty,
@@ -435,21 +485,80 @@ const saveItem = () => {
     customer: newItem.customer,
   };
 
+  // Add or update item in the items array
   if (editIndex.value !== null) {
     invoice.items[editIndex.value] = itemData;
   } else {
     invoice.items.push(itemData);
   }
 
-  toast.add({
-    severity: editIndex.value !== null ? "success" : "info",
-    summary: editIndex.value !== null ? "Item Updated" : "Item Added",
-    detail: `Item ${
-      editIndex.value !== null ? "updated" : "added"
-    } successfully`,
-    life: 2000,
-  });
+  // If this is a new invoice that hasn't been saved yet, auto-save it first
+  if (isInvoiceNew.value && !invoiceName.value) {
+    try {
+      // Make sure supplier (required field) is present
+      if (!validateSupplier()) {
+        toast.add({
+          severity: "error",
+          summary: "Error",
+          detail: "Please select a supplier before adding items",
+          life: 3000,
+        });
+        return;
+      }
 
+      // Auto-save the invoice
+      await handleSaveInvoice();
+      
+      toast.add({
+        severity: "success",
+        summary: "Invoice Created",
+        detail: `Invoice ${invoiceName.value} has been created with the item`,
+        life: 3000,
+      });
+    } catch (error) {
+      console.error("Failed to auto-save invoice:", error);
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to save the invoice. Please try again.",
+        life: 3000,
+      });
+      return;
+    }
+  } 
+  // If this is an existing invoice, update it
+  else if (!isInvoiceNew.value && invoiceName.value) {
+    try {
+      await handleSaveInvoice();
+      
+      toast.add({
+        severity: editIndex.value !== null ? "success" : "info",
+        summary: editIndex.value !== null ? "Item Updated" : "Item Added",
+        detail: `Item ${editIndex.value !== null ? "updated" : "added"} to invoice ${invoiceName.value}`,
+        life: 3000,
+      });
+    } catch (error) {
+      console.error("Failed to update invoice:", error);
+      toast.add({
+        severity: "error",
+        summary: "Error",
+        detail: "Failed to update the invoice. Please try again.",
+        life: 3000,
+      });
+      return;
+    }
+  }
+  // If we're not auto-saving (just working with a new unsaved invoice)
+  else {
+    toast.add({
+      severity: editIndex.value !== null ? "success" : "info",
+      summary: editIndex.value !== null ? "Item Updated" : "Item Added",
+      detail: `Item ${editIndex.value !== null ? "updated" : "added"} successfully`,
+      life: 2000,
+    });
+  }
+
+  // Close dialog and reset form
   resetDialog();
 };
 
