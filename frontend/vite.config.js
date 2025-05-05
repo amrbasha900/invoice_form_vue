@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa';
 
 import vue from '@vitejs/plugin-vue';
 import proxyOptions from './proxyOptions';
@@ -8,7 +9,34 @@ import fs from "fs"
 
 // https://vitejs.dev/config/
 export default defineConfig({
-	plugins: [vue(), tailwindcss()],
+	plugins: [vue(), tailwindcss(),
+    VitePWA({ 
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'Invoice Form App',
+        short_name: 'InvoiceApp',
+        description: 'Invoice management built with Vue + Frappe',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        start_url: '/invoice_form/',
+        scope: '/invoice_form/',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
+    })
+	],
 	server: {
 		port: 8080,
 		proxy: getProxyOptions(),

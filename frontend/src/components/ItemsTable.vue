@@ -10,8 +10,11 @@
       </Column>
       <Column field="qty" :header="$t('qty')" headerClass="text-center" bodyClass="text-center" />
       <Column field="rate" :header="$t('rate')" headerClass="text-center" bodyClass="text-center" />
-      <Column field="amount" :header="$t('amount')" headerClass="text-center" bodyClass="text-center" />
-      <Column :header="$t('customer')" headerClass="text-center" bodyClass="text-center">
+      <Column :header="$t('amount')" headerClass="text-center" bodyClass="text-center">
+  <template #body="slotProps">
+    {{ formatAmount(slotProps.data.amount) }}
+  </template>
+</Column>      <Column :header="$t('customer')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ slotProps.data.customer?.label || slotProps.data.customer }}
         </template>
@@ -32,7 +35,7 @@
 
   <!-- Right: Total Amount -->
   <div class="text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-    {{ $t('total') }}: {{ totalAmount }}
+    {{ $t('total') }}: {{ totalAmountFormatted  }}
   </div>
 </div>
 
@@ -82,6 +85,14 @@ const onRowClick = (event) => {
 const totalAmount = computed(() => {
   return props.items.reduce((sum, item) => sum + (item.amount || 0), 0);
 });
+const totalAmountFormatted = computed(() => {
+  return totalAmount.value.toFixed(2);
+});
+const formatAmount = (value) => {
+  if (value == null || isNaN(value)) return '0.00';
+  return Number(value).toFixed(2);
+};
+
 </script>
 
 <style scoped>

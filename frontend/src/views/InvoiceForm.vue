@@ -47,9 +47,9 @@
       :totalRows="invoice.items.length" 
       @save-item="saveItem"
       @delete-item="handleDeleteItem"
-      @clear-customer="isDirty = true"
+      @clear-customer="isDirty = false"
       @navigate-row="handleRowNavigation" 
-      @clear-item="isDirty = true"
+      @clear-item="isDirty = false"
        :is-draft="isDraft"
       :can-update-draft="$permissions.hasPermission('can_update_draft')"
       :can-update-submitted="$permissions.hasPermission('can_update_submitted')"
@@ -180,11 +180,11 @@ const validateSupplier = () => {
 
 // Event handlers for header component
 const onClearSupplier = () => {
-  isDirty.value = true;
+  isDirty.value = false;
 };
 
 const onClearCustomer = () => {
-  isDirty.value = true;
+  isDirty.value = false;
 };
 
 // Open add dialog
@@ -248,7 +248,7 @@ const handleDeleteItem = async (index) => {
     
     // Reset the dialog and close it
     resetDialog();
-    isDirty.value = true;
+    isDirty.value = false;
     showItemDialog.value = false;
   } else {
     console.error("Invalid index for deletion:", index);
@@ -381,7 +381,7 @@ const toastMessage = {
   }
 
   // Set dirty flag
-  isDirty.value = true;
+  isDirty.value = false;
 };
 
 // Reset form + edit index
@@ -610,7 +610,7 @@ function fixDropdownWidth() {
 watch(
   () => [invoice.supplier, invoice.customer, invoice.items],
   () => {
-    isDirty.value = true;
+    isDirty.value = false;
   },
   { deep: true }
 );
