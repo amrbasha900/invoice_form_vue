@@ -1,157 +1,165 @@
 <template>
-  <div>
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">{{$t('dashboard')}}</h1>
-      <p class="text-gray-600 mt-1">{{$t('dashboardWellcom')}}</p>
+  <div class="home-container">
+    <!-- Using the Logo Component -->
+    <div class="logo-container">
+      <LogoComponent class="logo-animation" />
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <!-- Draft Invoices Card -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">{{$t('draftInvoices')}}</h2>
-          <div class="p-2 bg-blue-100 text-blue-800 rounded-full">
-            <i class="pi pi-file-o"></i>
-          </div>
-        </div>
-        <div class="text-3xl font-bold">{{ stats.draftCount || 0 }}</div>
-        <div class="mt-2 text-sm text-gray-500">{{$t('pendingInvoices')}}</div>
-        <div class="mt-4">
-          <Button :label="$t('viewDrafts')" icon="pi pi-eye" @click="$router.push('/drafts')" class="p-button-text" />
-        </div>
-      </div>
-
-      <!-- Submitted Invoices Card -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">{{$t('submittedInvoices')}}</h2>
-          <div class="p-2 bg-green-100 text-green-800 rounded-full">
-            <i class="pi pi-check-circle"></i>
-          </div>
-        </div>
-        <div class="text-3xl font-bold">{{ stats.submittedCount || 0 }}</div>
-        <div class="mt-2 text-sm text-gray-500">{{$t('completedInvoices')}}</div>
-        <div class="mt-4">
-          <Button :label="$t('viewSubmitted')" icon="pi pi-eye" class="p-button-text" />
-        </div>
-      </div>
-
-      <!-- Quick Actions Card -->
-      <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">{{$t('quickActions')}}</h2>
-          <div class="p-2 bg-purple-100 text-purple-800 rounded-full">
-            <i class="pi pi-bolt"></i>
-          </div>
-        </div>
-        <div class="space-y-3">
-          <Button :label="$t('createNewInvoice')" icon="pi pi-plus" @click="$router.push('/invoice')" class="w-full" />
-          <Button :label="$t('viewDraftInvoices')" icon="pi pi-file-o" @click="$router.push('/drafts')" class="w-full p-button-outlined" />
-        </div>
-      </div>
+    <!-- Welcome Text -->
+    <div class="welcome-text">
+      <h1 class="text-xl font-bold text-gray-900">{{$t('dashboard')}}</h1>
+      <p class="text-sm text-gray-600 mt-1">{{$t('dashboardWellcom')}}</p>
     </div>
 
-    <!-- Recent Activity -->
-    <!-- <div class="bg-white shadow rounded-lg p-6 mb-8">
-      <h2 class="text-lg font-semibold mb-4">{{$t('recentActivity')}}</h2>
-      
-      <div v-if="loading" class="flex justify-center my-6">
-        <i class="pi pi-spin pi-spinner text-2xl"></i>
-      </div>
-      
-      <div v-else-if="recentInvoices.length > 0" class="overflow-x-auto">
-        <DataTable :value="recentInvoices" class="p-datatable-sm" responsiveLayout="scroll">
-          <Column field="name" :header="$t('invoiceID')">
-            <template #body="slotProps">
-              <router-link :to="`/invoice?invoice_name=${slotProps.data.name}`" class="text-primary-600 hover:underline">
-                {{ slotProps.data.name }}
-              </router-link>
-            </template>
-          </Column>
-          <Column field="posting_date" :header="$t('date')">
-            <template #body="slotProps">
-              {{ formatDate(slotProps.data.posting_date) }}
-            </template>
-          </Column>
-          <Column field="customer_name" :header="$t('customer')" />
-          <Column field="supplier_name" :header="$t('supplier')" />
-          <Column field="status" :header="$t('status')">
-            <template #body="slotProps">
-              <Tag :value="slotProps.data.status" 
-                  :severity="slotProps.data.status === 'Draft' ? 'warning' : 'success'" />
-            </template>
-          </Column>
-          <Column :header="$t('actions')" bodyStyle="text-align:center">
-            <template #body="slotProps">
-              <Button icon="pi pi-eye" class="p-button-rounded p-button-text p-button-sm" 
-                     @click="$router.push(`/invoice?invoice_name=${slotProps.data.name}`)" />
-            </template>
-          </Column>
-        </DataTable>
-      </div>
-      
-      <div v-else class="text-center py-4 text-gray-500">
-        {{$t('noRecentActivityFound')}}
-      </div>
-    </div> -->
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+      <Button 
+        :label="$t('createNewInvoice')" 
+        icon="pi pi-plus" 
+        @click="$router.push('/invoice')" 
+        class="p-button-md" 
+      />
+      <Button 
+        :label="$t('viewDraftInvoices')" 
+        icon="pi pi-file-o" 
+        @click="$router.push('/drafts')" 
+        class="p-button-outlined p-button-md mt-3" 
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import axios from 'axios'
-import { useToast } from 'primevue/usetoast'
+import { onMounted, onBeforeUnmount } from 'vue';
+import Button from 'primevue/button';
+import LogoComponent from '../components/LogoComponent.vue';
 
-const toast = useToast()
-const loading = ref(true)
-const recentInvoices = ref([])
-const stats = ref({
-  draftCount: 0,
-  submittedCount: 0
-})
+// Responsive viewport height handling to avoid mobile scrolling issues
+const adjustHeight = () => {
+  const vh = window.innerHeight * 0.01;
+  document.documentElement.style.setProperty('--vh', `${vh}px`);
+};
 
-// Format date 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  
-  const date = new Date(dateString)
-  if (isNaN(date)) return dateString
-  
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(date)
+onMounted(() => {
+  adjustHeight();
+  window.addEventListener('resize', adjustHeight);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', adjustHeight);
+});
+</script>
+
+<style scoped>
+.home-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Use CSS custom property for true viewport height */
+  height: calc(var(--vh, 1vh) * 100);
+  max-height: 100vh;
+  box-sizing: border-box;
+  /* Add overflow control to prevent scrolling */
+  overflow: hidden;
 }
 
-onMounted(async () => {
-  try {
-    loading.value = true
-    
-    // Get dashboard data
-    const res = await axios.get('/api/method/invoice_form_vue.api.get_dashboard_data')
-    const data = res.data.message.message || res.data
-    
-    // Update statistics
-    stats.value = {
-      draftCount: data.draft_count || 0,
-      submittedCount: data.submitted_count || 0
-    }
-    
-    // Update recent invoices
-    recentInvoices.value = data.recent_invoices || []
-    console.log(data)
-    
-  } catch (error) {
-    console.error('Error loading dashboard data:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load dashboard data',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
+.logo-container {
+  width: 100%;
+  /* Smaller on mobile, larger on desktop */
+  max-width: min(60vw, 220px);
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  flex-shrink: 1;
+}
+
+.logo-animation {
+  width: 100%;
+  height: auto;
+  /* Add floating animation to the SVG component */
+  animation: float 6s infinite ease-in-out;
+  /* Prevent oversizing */
+  max-height: 35vh;
+}
+
+.welcome-text {
+  text-align: center;
+  margin-bottom: 2rem;
+  /* Allow text to shrink if needed */
+  flex-shrink: 1;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 250px;
+  /* Allow buttons to shrink if needed */
+  flex-shrink: 1;
+}
+
+/* Use medium sized buttons that work better on mobile */
+.p-button-md {
+  height: 3rem;
+  font-size: 1rem;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
   }
-})
-</script>
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Media query for larger screens */
+@media (min-height: 700px) {
+  .logo-container {
+    max-width: 280px;
+    margin-bottom: 2rem;
+  }
+  
+  .welcome-text {
+    margin-bottom: 2.5rem;
+  }
+  
+  .p-button-md {
+    height: 3.5rem;
+  }
+}
+
+/* Media query for very small screens */
+@media (max-height: 500px) {
+  .logo-container {
+    max-width: 150px;
+    margin-bottom: 1rem;
+  }
+  
+  .welcome-text {
+    margin-bottom: 1rem;
+  }
+  
+  .welcome-text h1 {
+    font-size: 1.1rem;
+  }
+  
+  .welcome-text p {
+    font-size: 0.8rem;
+  }
+  
+  .p-button-md {
+    height: 2.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .action-buttons .mt-3 {
+    margin-top: 0.75rem;
+  }
+}
+</style>

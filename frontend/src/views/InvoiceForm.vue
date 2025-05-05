@@ -1,221 +1,83 @@
+<!-- views/InvoiceForm.vue (Navigation Fix) -->
 <template>
   <div class="invoice-form max-w-2xl mx-auto p-4">
     <form @submit.prevent="saveInvoice">
-      <!-- Display Invoice Name -->
-      <div class="mb-4">
-        <h3 v-if="invoiceName" class="font-semibold text-lg">
-          {{ $t('invoiceName') }}: {{ invoiceName }}
-        </h3>
-      </div>
-      <!-- Two columns on small+ screens -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <!-- Supplier -->
-        <!-- Supplier field with grid layout and red active trash button -->
-<div class="w-full">
-  <div class="grid grid-cols-12 gap-1">
-    <div class="col-span-11">
-      <FloatLabel variant="on" class="w-full block">
-        <AutoComplete
-          v-model="invoice.supplier"
-          inputId="supplier"
-          :suggestions="supplierSuggestions"
-          optionLabel="label"
-          @complete="searchSupplier"
-          :forceSelection="true"
-          :completeOnFocus="true"
-          class="w-full"
-        />
-        <label for="supplier">{{ $t('supplier') }}</label>
-      </FloatLabel>
-    </div>
-    <div class="col-span-1 flex items-center justify-center">
-      <Button 
-        icon="pi pi-trash" 
-        :class="[
-          'p-button-rounded p-button-text',
-          invoice.supplier ? 'p-button-danger' : ''
-        ]"
-        @click="clearSupplier"
-        type="button"
-        aria-label="Clear supplier"
-        :disabled="!invoice.supplier"
+      <!-- Invoice Header with Supplier and Customer -->
+      <InvoiceHeader
+        v-model:supplier="invoice.supplier"
+        v-model:customer="invoice.customer"
+        :invoice-name="invoiceName"
+        :all-suppliers="allSuppliers"
+        :all-customers="allCustomers"
+        :validation-errors="validationErrors"
+        @clear-supplier="onClearSupplier"
+        @clear-customer="onClearCustomer"
       />
-    </div>
-  </div>
-  <span v-if="validationErrors.supplier" class="text-sm text-red-500 validationErrors">
-    {{ $t('supplierIsRequired') }}
-  </span>
-</div>
-        <!-- Customer -->
-        <div class="w-full">
-          <div class="grid grid-cols-12 gap-1">
-            <div class="col-span-11">
-              <FloatLabel variant="on" class="w-full block">
-                <AutoComplete v-model="invoice.customer" inputId="customer" :suggestions="customerSuggestions"
-                  optionLabel="label" @complete="searchCustomer" :forceSelection="true" :completeOnFocus="true"
-                  class="w-full" />
-                <label for="customer">{{ $t('customer') }}</label>
-              </FloatLabel>
-            </div>
-            <div class="col-span-1 flex items-center justify-center">
-              <Button icon="pi pi-trash" :class="[
-          'p-button-rounded p-button-text',
-          invoice.customer ? 'p-button-danger' : ''
-        ]" @click="clearMainCustomer" type="button"
-                aria-label="Clear customer" :disabled="!invoice.customer" />
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <div class="mt-6">
-        <DataTable :value="invoice.items" class="w-full mt-6 text-lg" responsiveLayout="scroll" @row-click="onRowClick">
-          <Column field="item" :header="$t('item')" />
-          <Column field="qty" :header="$t('qty')" />
-          <Column field="rate" :header="$t('rate')" />
-          <Column field="amount" :header="$t('amount')">
-            <template #body="slotProps">
-              {{ formatCurrency(slotProps.data.amount) }}
-            </template>
-          </Column>
+      <!-- Items Table -->
+      <ItemsTable
+  :items="invoice.items"
+  :is-draft="isDraft"
+  :can-update-draft="$permissions?.hasPermission('can_update_draft')"
+  @row-click="onRowClick"
+  @add-item="openAddDialog"
+/>
 
-          <!-- Customer (custom render) -->
-          <Column :header="$t('customer')">
-            <template #body="slotProps">
-              {{ slotProps.data.customer?.label || slotProps.data.customer }}
-            </template>
-          </Column>
-        </DataTable>
-      </div>
-      <div class="mt-6">
-        <Button :label="$t('addItem')" icon="pi pi-plus" @click="openAddDialog" />
-      </div>
-      <!-- Submit -->
-      <!-- Buttons: Save, Update, Delete, Submit -->
-      <div class="mt-6">
-        <Button v-if="isInvoiceNew" :label="$t('saveInvoice')" @click="handleSaveInvoice" class="w-full" />
-        <Button v-if="!isInvoiceNew" :label="$t('update')" @click="handleSaveInvoice" class="w-full mt-2" />
-
-        <Button v-if="!isInvoiceNew" :label="$t('deleteInvoice')" icon="pi pi-trash" severity="danger"
-          @click="deleteInvoice" class="w-full mt-2" />
-
-        <Button v-if="!isInvoiceNew" :label="$t('submitInvoice')" icon="pi pi-check" severity="success"
-          @click="submitInvoice" class="w-full mt-2" />
-      </div>
+      <!-- Action Buttons -->
+      <InvoiceButtons
+  :is-invoice-new="!invoiceName"
+  @save="handleSaveInvoice"
+  @delete="deleteInvoice"
+  @submit="submitInvoice"
+  :can-save="$permissions?.hasPermission(isDraft ? 'can_update_draft' : 'can_update_submitted')"
+  :can-delete="$permissions?.hasPermission('can_delete_invoice') && isDraft"
+  :can-submit="$permissions?.hasPermission('can_submit_invoice') && isDraft"
+/>
     </form>
 
-    <!-- Add Item Dialog -->
-    <Dialog :header="$t('addItem')" v-model:visible="showItemDialog" modal :dismissableMask="true" :style="{
-        width: '100%',
-        maxWidth: '400px',
-        position: 'fixed',
-        top: '2%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-      }" :breakpoints="{ '960px': '95vw', '640px': '100vw' }">
-      <div class="mt-1">
-        <FloatLabel variant="on" class="w-full block">
-          <AutoComplete v-model="newItem.item" inputId="item" :suggestions="itemSuggestions" optionLabel="label"
-            @complete="searchItem" :forceSelection="true" :completeOnFocus="true" class="w-full" />
-          <label for="item">{{ $t('itemCode') }}</label>
-        </FloatLabel>
-        <span v-if="validationErrors.item" class="text-sm text-red-500 validationErrors">
-          {{ $t('itemCodeIsRequired') }}
-        </span>
-        <div class="grid grid-cols-3 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
-          <div>
-            <FloatLabel variant="on">
-              <InputText
-    v-model="qtyInput"
-    inputId="qty"
-    class="w-full"
-    inputmode="decimal"
-    type="text"
-    pattern="[0-9]*[.,]?[0-9]*"
-  />
-              <label for="qty">{{ $t('qty') }}</label>
-            </FloatLabel>
-            <span v-if="validationErrors.qty" class="text-sm text-red-500 validationErrors">
-              {{ $t('qtyIsRequired') }}
-            </span>
-          </div>
-          <div>
-            <FloatLabel variant="on">
-              <InputText
-                v-model="rateInput"
-                inputId="rate"
-                class="w-full"
-                inputmode="decimal"
-                type="text"
-                pattern="[0-9]*[.,]?[0-9]*"
-                
-              />
-              <label for="rate">{{ $t('rate') }}</label>
-            </FloatLabel>
-            <span v-if="validationErrors.rate" class="text-sm text-red-500 validationErrors">
-              {{ $t('rateIsRequired') }}
-            </span>
-          </div>
-          <FloatLabel variant="on" class="w-full">
-            <InputText v-model="newItem.amount" inputId="amount" class="w-full" :disabled="true" mode="currency"
-              currency="SAR" />
-            <label for="amount">{{ $t('totalAmount') }}</label>
-          </FloatLabel>
-        </div>
-        <div class="w-full">
-  <div class="grid grid-cols-12 gap-1">
-    <div class="col-span-11">
-      <FloatLabel variant="on" class="w-full block">
-        <AutoComplete
-          v-model="newItem.customer"
-          inputId="Customer"
-          :suggestions="customerSuggestions"
-          optionLabel="label"
-          @complete="searchCustomer"
-          :forceSelection="true"
-          :completeOnFocus="true"
-          class="w-full"
-        />
-        <label for="Customer">{{ $t('customer') }}</label>
-      </FloatLabel>
-    </div>
-    <div class="col-span-1 flex items-center justify-center">
-      <Button 
-        icon="pi pi-trash" 
-        :class="[
-          'p-button-rounded p-button-text',
-          newItem.customer ? 'p-button-danger' : ''
-        ]" 
-        @click="clearCustomer"
-        type="button"
-        aria-label="Clear customer"
-        :disabled="!newItem.customer"
-      />
-    </div>
-  </div>
-  <span v-if="validationErrors.customer" class="text-sm text-red-500 validationErrors">
-    {{ $t('customerIsRequired') }}
-  </span>
-</div>
-        <div class="flex flex-wrap items-center justify-center gap-10">
-          <Button :label="editIndex !== null ? $t('update') : $t('add')" @click="saveItem" class="w-full my-50px" />
-          <div class="h-3"></div>
-          <Button v-if="editIndex !== null" :label="$t('delete')" icon="pi pi-trash" severity="danger"
-            @click="handleDelete" class="w-full" />
-        </div>
-      </div>
-    </Dialog>
+    <!-- Add/Edit Item Dialog with added totalRows prop -->
+    <ItemDialog
+      :visible="showItemDialog"
+      @update:visible="showItemDialog = $event"
+      :itemData="newItem"
+      :edit-index="editIndex"
+      :all-items="allItems"
+      :all-customers="allCustomers"
+      :validation-errors="validationErrors"
+      :totalRows="invoice.items.length" 
+      @save-item="saveItem"
+      @delete-item="handleDeleteItem"
+      @clear-customer="isDirty = true"
+      @navigate-row="handleRowNavigation" 
+      @clear-item="isDirty = true"
+       :is-draft="isDraft"
+      :can-update-draft="$permissions.hasPermission('can_update_draft')"
+      :can-update-submitted="$permissions.hasPermission('can_update_submitted')"
+      :can-delete-invoice="$permissions.hasPermission('can_delete_invoice')"
+    />
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, watch , computed} from "vue";
+import { inject } from 'vue';
+
+const $permissions = inject('$permissions');
+
+import { reactive, ref, onMounted, watch } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
-const route = useRoute();
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
 
+// Import components
+import InvoiceHeader from "../components/InvoiceHeader.vue";
+import ItemsTable from "../components/ItemsTable.vue";
+import InvoiceButtons from "../components/InvoiceButtons.vue";
+import ItemDialog from "../components/ItemDialog.vue";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+const route = useRoute();
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -223,6 +85,7 @@ const confirm = useConfirm();
 const showItemDialog = ref(false);
 const editIndex = ref(null);
 const isInvoiceNew = ref(true); // Track if the invoice is new
+const isDraft = ref(true);
 const invoiceName = ref(null);
 const invoice = reactive({
   supplier: "",
@@ -233,146 +96,16 @@ const invoice = reactive({
 // Form item
 const newItem = reactive({
   item: "",
-  qty: null,
+  qty: "",
   qtyEditing: false,
-  rate: null,
+  rate: "",
   rateEditing: false,
   amount: null,
   customer: "",
 });
 const isDirty = ref(false);
 
-// Calculate amount when qty or rate changes
-const calculateAmount = () => {
-  // Calculate raw amount
-  const rawAmount = (newItem.qty || 0) * (newItem.rate || 0);
-  
-  // Format to 2 decimal places using toFixed and convert back to number
-  newItem.amount = parseFloat(rawAmount.toFixed(2));
-};
-
-// Format currency for display
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "SAR",
-  }).format(value);
-};
-
-//Handle Arabic Numbers
-// Updated rateInput computed property with deletion support
-const rateInput = computed({
-  get() {
-    return newItem.rate === 0 && !newItem.rateEditing ? '' : newItem.rate.toString();
-  },
-  set(value) {
-    newItem.rateEditing = true;
-    
-    // If the field is being cleared (empty or just a decimal point), allow it
-    if (value === '' || value === '.' || value === '،' || value === '٫') {
-      newItem.rate = 0;
-      calculateAmount();
-      return;
-    }
-    
-    // First replace all Arabic numerals with Western numerals
-    let westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
-      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
-    });
-    
-    // Replace Arabic decimal separators with Western decimal point
-    westernValue = westernValue.replace(/[،٫]/g, '.');
-    
-    // In case a user enters mixed characters, ensure only digits and decimal points remain
-    westernValue = westernValue.replace(/[^\d.]/g, '');
-    
-    // Handle multiple decimal points (keep only the first one)
-    const parts = westernValue.split('.');
-    if (parts.length > 2) {
-      westernValue = parts[0] + '.' + parts.slice(1).join('');
-    }
-    
-    // Only update if it's a valid number or an empty string (for deletion)
-    if (westernValue === '') {
-      newItem.rate = 0;
-    } else {
-      const numValue = parseFloat(westernValue);
-      if (!isNaN(numValue)) {
-        newItem.rate = numValue;
-      }
-    }
-    
-    calculateAmount();
-  }
-});
-
-
-
-const clearSupplier = () => {
-  invoice.supplier = "";
-  // Mark the form as dirty since we made a change
-  isDirty.value = true;
-};
-const clearCustomer = () => {
-  newItem.customer = "";
-};
-
-const clearMainCustomer = () => {
-  invoice.customer = "";
-  // Mark the form as dirty since we made a change
-  isDirty.value = true;
-};
-
-// Also need to do the same for qty
-// Updated qtyInput computed property with comprehensive Arabic handling
-// Updated qtyInput computed property with deletion support
-const qtyInput = computed({
-  get() {
-    return newItem.qty === 0 && !newItem.qtyEditing ? '' : newItem.qty.toString();
-  },
-  set(value) {
-    newItem.qtyEditing = true;
-    
-    // If the field is being cleared (empty or just a decimal point), allow it
-    if (value === '' || value === '.' || value === '،' || value === '٫') {
-      newItem.qty = 0;
-      calculateAmount();
-      return;
-    }
-    
-    // First replace all Arabic numerals with Western numerals
-    let westernValue = value.replace(/[٠١٢٣٤٥٦٧٨٩]/g, (d) => {
-      return String.fromCharCode(d.charCodeAt(0) - 1632 + 48);
-    });
-    
-    // Replace Arabic decimal separators with Western decimal point
-    westernValue = westernValue.replace(/[،٫]/g, '.');
-    
-    // In case a user enters mixed characters, ensure only digits and decimal points remain
-    westernValue = westernValue.replace(/[^\d.]/g, '');
-    
-    // Handle multiple decimal points (keep only the first one)
-    const parts = westernValue.split('.');
-    if (parts.length > 2) {
-      westernValue = parts[0] + '.' + parts.slice(1).join('');
-    }
-    
-    // Only update if it's a valid number or an empty string (for deletion)
-    if (westernValue === '') {
-      newItem.qty = 0;
-    } else {
-      const numValue = parseFloat(westernValue);
-      if (!isNaN(numValue)) {
-        newItem.qty = numValue;
-      }
-    }
-    
-    calculateAmount();
-  }
-});
-
 // Required field keys
-
 const requiredFields = ["item", "qty", "rate", "customer"];
 const requiredMainFields = ["supplier"];
 const validationErrors = reactive({});
@@ -381,9 +114,36 @@ const validationErrors = reactive({});
 const allSuppliers = ref([]);
 const allCustomers = ref([]);
 const allItems = ref([]);
-const supplierSuggestions = ref([]);
-const customerSuggestions = ref([]);
-const itemSuggestions = ref([]);
+
+// NEW FUNCTION: Handle row navigation from dialog
+const handleRowNavigation = (newIndex) => {
+  console.log('Navigation requested to row:', newIndex);
+  
+  // Validate the index is within bounds
+  if (newIndex < 0 || newIndex >= invoice.items.length) {
+    console.error('Invalid row index:', newIndex);
+    return;
+  }
+  
+  // Update the edit index
+  editIndex.value = newIndex;
+  
+  // Get the item data from the invoice items array
+  const rowData = invoice.items[newIndex];
+  
+  // Format the data for the dialog
+  Object.assign(newItem, {
+    item: { label: rowData.item, code: rowData.item },
+    qty: rowData.qty,
+    rate: rowData.rate,
+    customer: rowData.customer,
+    amount: rowData.amount,
+    qtyEditing: true,  // Set to true so existing values display properly
+    rateEditing: true  // Set to true so existing values display properly
+  });
+  
+  console.log('Updated dialog data for row:', newIndex, newItem);
+};
 
 // Validate form
 const validateDialog = () => {
@@ -402,7 +162,7 @@ const validateDialog = () => {
   return isValid;
 };
 
-const validateSupplier  = () => {
+const validateSupplier = () => {
   let isValid = true;
   requiredMainFields.forEach((field) => {
     if (
@@ -417,35 +177,14 @@ const validateSupplier  = () => {
   });
   return isValid;
 };
-// Watch for changes to qty or rate to update amount
-watch(
-  () => [newItem.qty, newItem.rate],
-  () => {
-    calculateAmount();
-  },
-  { deep: true }
-);
 
-// Search methods
-const searchSupplier = (event) => {
-  const query = event.query.toLowerCase();
-  supplierSuggestions.value = allSuppliers.value.filter((s) =>
-    s.label.toLowerCase().includes(query)
-  );
+// Event handlers for header component
+const onClearSupplier = () => {
+  isDirty.value = true;
 };
 
-const searchCustomer = (event) => {
-  const query = event.query?.toLowerCase() || "";
-  customerSuggestions.value = !query
-    ? allCustomers.value.slice(0, 5)
-    : allCustomers.value.filter((c) => c.label.toLowerCase().includes(query));
-};
-
-const searchItem = (event) => {
-  const query = event.query.toLowerCase();
-  itemSuggestions.value = allItems.value.filter((i) =>
-    i.label.toLowerCase().includes(query)
-  );
+const onClearCustomer = () => {
+  isDirty.value = true;
 };
 
 // Open add dialog
@@ -467,13 +206,67 @@ const onRowClick = (event) => {
     rate: row.rate,
     customer: row.customer,
     amount: row.amount,
+    qtyEditing: true,  // Set to true so existing values display properly
+    rateEditing: true  // Set to true so existing values display properly
   });
   showItemDialog.value = true;
 };
-
+// In InvoiceForm.vue script
+const handleDeleteItem = async (index) => {
+  if (index !== null && index >= 0 && index < invoice.items.length) {
+    // Remove the item from the local array
+    invoice.items.splice(index, 1);
+    const itemName = invoice.items[index].item;
+    // Update the invoice in the database if it has already been saved
+    if (invoiceName.value) {
+      try {
+        // Call the saveInvoice function with a custom toast message
+        await handleSaveInvoice({
+          severity: "success",
+          summary: t('itemDeleted'),
+          //detail: t('itemDeletedFromInvoice', { itemName: itemName, invoiceName: invoiceName.value }),
+          life: 2000,
+        });
+      } catch (error) {
+        console.error("Failed to update invoice after deletion:", error);
+        toast.add({
+          severity: "error",
+          summary: t('error'),
+          detail: t('failedToUpdateAfterDeletion'),
+          life: 3000,
+        });
+      }
+    } else {
+      // Just show a success message if this is a new unsaved invoice
+      toast.add({
+        severity: "success",
+        summary: t('deleted'),
+        //detail: t('itemRemoved', { itemName: itemName }),
+        life: 2000,
+      });
+    }
+    
+    // Reset the dialog and close it
+    resetDialog();
+    isDirty.value = true;
+    showItemDialog.value = false;
+  } else {
+    console.error("Invalid index for deletion:", index);
+    toast.add({
+      severity: "error",
+      summary: t('error'),
+      detail: t('failedToDeleteItem'),
+      life: 2000,
+    });
+  }
+};
 // Save item (add or update)
-// Updated saveItem function with auto-save logic
-const saveItem = async () => {
+// In InvoiceForm.vue, modify the saveItem function:
+
+const saveItem = async (itemFormData) => {
+  // Update newItem with the data from the dialog
+  Object.assign(newItem, itemFormData);
+  
   if (!validateDialog()) return;
   
   // Create item data object from form
@@ -485,12 +278,37 @@ const saveItem = async () => {
     customer: newItem.customer,
   };
 
+  // Get the item name for toast messages
+  const itemName = newItem.item.label || newItem.item.code;
+
+  // Remember if this was an edit or add operation
+  const wasEdit = editIndex.value !== null;
+
   // Add or update item in the items array
-  if (editIndex.value !== null) {
+  if (wasEdit) {
     invoice.items[editIndex.value] = itemData;
   } else {
     invoice.items.push(itemData);
   }
+
+  // Prepare the toast message with item name
+  const hasInvoice = invoiceName.value && invoiceName.value.trim() !== '';
+
+const toastMessage = {
+  severity: wasEdit ? "success" : "info",
+  summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
+  // detail: wasEdit 
+  //   ? t(hasInvoice ? 'itemUpdateSuccess' : 'itemUpdateSuccessNoInvoice', {
+  //       itemName: itemName,
+  //       invoiceName: invoiceName.value
+  //     })
+  //   : t(hasInvoice ? 'itemAddSuccess' : 'itemAddSuccessNoInvoice', {
+  //       itemName: itemName,
+  //       invoiceName: invoiceName.value
+  //     }),
+  life: 3000,
+};
+
 
   // If this is a new invoice that hasn't been saved yet, auto-save it first
   if (isInvoiceNew.value && !invoiceName.value) {
@@ -499,28 +317,32 @@ const saveItem = async () => {
       if (!validateSupplier()) {
         toast.add({
           severity: "error",
-          summary: "Error",
-          detail: "Please select a supplier before adding items",
+          summary: t('error'),
+          detail: t('selectSupplierBeforeAddingItems'),
           life: 3000,
         });
         return;
       }
 
-      // Auto-save the invoice
-      await handleSaveInvoice();
-      
-      toast.add({
+      // Auto-save the invoice with custom toast
+      await handleSaveInvoice({
         severity: "success",
-        summary: "Invoice Created",
-        detail: `Invoice ${invoiceName.value} has been created with the item`,
+        summary: t('invoiceCreated'),
+        //detail: t('invoiceCreatedWithItem', { itemName: itemName }),
         life: 3000,
       });
+      
+      // Close dialog only for new items, then reset the form
+      if (!wasEdit) {
+        resetDialog();
+        showItemDialog.value = true;
+      }
     } catch (error) {
       console.error("Failed to auto-save invoice:", error);
       toast.add({
         severity: "error",
-        summary: "Error",
-        detail: "Failed to save the invoice. Please try again.",
+        summary: t('error'),
+        detail: t('failedToSaveInvoice'),
         life: 3000,
       });
       return;
@@ -529,20 +351,19 @@ const saveItem = async () => {
   // If this is an existing invoice, update it
   else if (!isInvoiceNew.value && invoiceName.value) {
     try {
-      await handleSaveInvoice();
+      await handleSaveInvoice(toastMessage);
       
-      toast.add({
-        severity: editIndex.value !== null ? "success" : "info",
-        summary: editIndex.value !== null ? "Item Updated" : "Item Added",
-        detail: `Item ${editIndex.value !== null ? "updated" : "added"} to invoice ${invoiceName.value}`,
-        life: 3000,
-      });
+      // Close dialog only for new items, then reset the form
+      if (!wasEdit) {
+        resetDialog();
+        showItemDialog.value = true;
+      }
     } catch (error) {
       console.error("Failed to update invoice:", error);
       toast.add({
         severity: "error",
-        summary: "Error",
-        detail: "Failed to update the invoice. Please try again.",
+        summary: t('error'),
+        detail: t('failedToUpdateInvoice'),
         life: 3000,
       });
       return;
@@ -550,25 +371,26 @@ const saveItem = async () => {
   }
   // If we're not auto-saving (just working with a new unsaved invoice)
   else {
-    toast.add({
-      severity: editIndex.value !== null ? "success" : "info",
-      summary: editIndex.value !== null ? "Item Updated" : "Item Added",
-      detail: `Item ${editIndex.value !== null ? "updated" : "added"} successfully`,
-      life: 2000,
-    });
+    toast.add(toastMessage);
+    
+    // Close dialog only for new items, then reset the form
+    if (!wasEdit) {
+      resetDialog();
+      showItemDialog.value = false;
+    }
   }
 
-  // Close dialog and reset form
-  resetDialog();
+  // Set dirty flag
+  isDirty.value = true;
 };
 
 // Reset form + edit index
 const resetDialog = () => {
   newItem.item = "";
   newItem.qty = "";
-   newItem.qtyEditing = false;
+  newItem.qtyEditing = false;
   newItem.rate = "";
-   newItem.rateEditing = false;
+  newItem.rateEditing = false;
   newItem.amount = null;
   if (!invoice.customer) {
     newItem.customer = "";
@@ -587,40 +409,10 @@ const resetInvoiceForm = () => {
   isInvoiceNew.value = true;
 };
 
-// Delete item
-const handleDelete = () => {
-  confirm.require({
-    message: "Are you sure you want to delete this item?",
-    header: "Confirm Delete",
-    icon: "pi pi-exclamation-triangle",
-    acceptClass: "p-button-danger",
-    acceptLabel: "Yes, Delete",
-    rejectLabel: "Cancel",
-    accept: () => {
-      invoice.items.splice(editIndex.value, 1);
-      toast.add({
-        severity: "success",
-        summary: "Deleted",
-        detail: "Item removed",
-        life: 2000,
-      });
-      resetDialog();
-      isDirty.value = false;
-      showItemDialog.value = false;
-    },
-    reject: () => {
-      toast.add({
-        severity: "info",
-        summary: "Cancelled",
-        detail: "Delete cancelled",
-        life: 2000,
-      });
-    },
-  });
-};
+
 
 // Save Invoice Logic
-const handleSaveInvoice = async () => {
+const handleSaveInvoice = async (customToast = null) => {
   if (!validateSupplier()) return;
   try {
     const invoiceData = {
@@ -632,16 +424,19 @@ const handleSaveInvoice = async () => {
     };
 
     const response = await saveInvoice(invoiceData); // Pass the invoice data to saveInvoice method
-    console.log(response);
     invoiceName.value = response.message.invoice_name; // Show the invoice name after save/update
-    toast.add({
-      severity: "success",
-      summary: isInvoiceNew.value ? "Invoice Created" : "Invoice Updated",
-      detail: `The invoice has been ${
-        isInvoiceNew.value ? "created" : "updated"
-      } successfully.`,
-      life: 2000,
-    });
+    
+    // Only show toast if customToast is not provided
+    if (!customToast) {
+      toast.add({
+        summary: isInvoiceNew.value ? t('invoiceCreated') : t('invoiceUpdated'),
+        //detail: isInvoiceNew.value ? t('invoiceCreatedSuccessfully') : t('invoiceUpdatedSuccessfully'),
+        life: 2000,
+      });
+    } else {
+      // Use the custom toast if provided
+      toast.add(customToast);
+    }
 
     isInvoiceNew.value = false; // Mark as existing invoice
     isDirty.value = false;
@@ -653,7 +448,7 @@ const handleSaveInvoice = async () => {
 
 const saveInvoice = async (invoiceData) => {
   try {
-      if (!validateSupplier()) return;
+    if (!validateSupplier()) return;
     // Send invoice data to the backend to create or update
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.create_invoice",
@@ -668,7 +463,7 @@ const saveInvoice = async (invoiceData) => {
     toast.add({
       severity: "error",
       summary: "Error",
-      detail: `$${err} : Failed to save/update invoice.`,
+      //detail: `Error: Failed to save/update invoice.`,
       life: 2000,
     });
     throw new Error(
@@ -680,22 +475,21 @@ const saveInvoice = async (invoiceData) => {
 const deleteInvoice = async () => {
   try {
     confirm.require({
-      message: "Are you sure you want to delete this invoice?",
-      header: "Confirm Delete",
-      icon: "pi pi-exclamation-triangle",
-      acceptClass: "p-button-danger",
-      acceptLabel: "Yes, Delete",
-      rejectLabel: "Cancel",
+      message: t('confirmDeleteInvoice'),
+      header: t('confirmDelete'),
+      icon: 'pi pi-exclamation-triangle',
+      acceptClass: 'p-button-danger',
+      acceptLabel: t('yesDelete'),
+      rejectLabel: t('cancel'),
       accept: async () => {
-        // Assuming an API to delete the invoice
         const response = await axios.post(
-          "/api/method/invoice_form_vue.api.delete_invoice",
+          '/api/method/invoice_form_vue.api.delete_invoice',
           { invoice_name: invoiceName.value }
         );
         toast.add({
-          severity: "success",
-          summary: "Invoice Deleted",
-          detail: "The invoice has been deleted.",
+          severity: 'success',
+          summary: t('invoiceDeleted'),
+          //detail: t('invoiceDeletedDetail'),
           life: 2000,
         });
         resetInvoiceForm();
@@ -704,24 +498,23 @@ const deleteInvoice = async () => {
     });
   } catch (error) {
     toast.add({
-      severity: "error",
-      summary: "Error",
-      detail: "Failed to delete invoice.",
+      severity: 'error',
+      summary: t('error'),
+      detail: t('deleteInvoiceFailed'),
     });
   }
 };
 
 const submitInvoice = async () => {
   try {
-    // Assuming an API to submit the invoice
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.remove_from_invoice",
       { invoice_name: invoiceName.value }
     );
     toast.add({
       severity: "success",
-      summary: "Invoice Submitted",
-      detail: "The invoice has been submitted.",
+      summary: t('invoiceSubmitted'),
+      //detail: t('invoiceSubmittedDetail'),
       life: 2000,
     });
     resetInvoiceForm();
@@ -729,8 +522,8 @@ const submitInvoice = async () => {
   } catch (error) {
     toast.add({
       severity: "error",
-      summary: "Error",
-      detail: "Failed to submit invoice.",
+      summary: t('error'),
+      detail: t('submitInvoiceFailed'),
     });
   }
 };
@@ -769,6 +562,7 @@ const loadInvoice = async (invoiceNameParam) => {
 
     invoiceName.value = invoiceData.name;
     isInvoiceNew.value = false;
+    isDraft.value = invoiceData.is_draft === 1;
   } catch (err) {
     console.error("Failed to load invoice:", err);
     toast.add({
@@ -778,6 +572,7 @@ const loadInvoice = async (invoiceNameParam) => {
     });
   }
 };
+
 function fixDropdownWidth() {
   // Create a style element if it doesn't exist
   let styleEl = document.getElementById('autocomplete-dropdown-fix');
@@ -811,6 +606,7 @@ function fixDropdownWidth() {
   }
 }
 
+// Watch for changes to track dirty state
 watch(
   () => [invoice.supplier, invoice.customer, invoice.items],
   () => {
@@ -818,6 +614,8 @@ watch(
   },
   { deep: true }
 );
+
+// Navigation guard
 onBeforeRouteLeave((to, from, next) => {
   if (isDirty.value) {
     const answer = window.confirm("You have unsaved changes. Do you really want to leave?");
@@ -831,9 +629,10 @@ onBeforeRouteLeave((to, from, next) => {
   }
 });
 
+// Load data when component is mounted
 onMounted(async () => {
   try {
-    fixDropdownWidth()
+    fixDropdownWidth();
     const response = await axios.get(
       "/api/method/invoice_form_vue.api.get_suppliers_and_customers"
     );
@@ -853,10 +652,6 @@ onMounted(async () => {
     allCustomers.value = formatList(result.customers);
     allItems.value = formatList(result.items);
 
-    supplierSuggestions.value = [...allSuppliers.value];
-    customerSuggestions.value = [...allCustomers.value];
-    itemSuggestions.value = [...allItems.value];
-
     if (route.query.invoice_name) {
       await loadInvoice(route.query.invoice_name);
     }
@@ -869,6 +664,7 @@ onMounted(async () => {
 <style scoped>
 .invoice-form {
   margin: 50px auto;
+  font-size: 0.9rem;
 }
 
 /* Force FloatLabel children to full width */
@@ -878,45 +674,27 @@ onMounted(async () => {
   margin-bottom: 1.5rem;
 }
 
-/* ✅ Force AutoComplete & DatePicker input wrappers to be full width */
-:deep(.p-inputtext),
-:deep(.p-autocomplete),
-:deep(.p-autocomplete-input),
-:deep(.p-autocomplete-panel),
-:deep(.p-datepicker),
-:deep(.p-inputwrapper),
-:deep(.p-element),
-:deep(.p-inputtext-sm) {
-  width: 100% !important;
-  max-width: 500px !important;
-  display: block;
-}
-
-/* Ensure PrimeVue input wrappers play nice */
-:deep(.p-autocomplete),
-:deep(.p-inputnumber) {
-  max-width: 500px !important;
-  display: flex;
-  width: 100% !important;
-  margin-bottom: 10px !important;
-  margin-top: 10px !important;
-}
 :deep(.p-datatable) {
    max-width: 500px !important;
 }
+
 :deep(.p-button) {
    max-width: 500px !important;
    margin: 10px auto;
 }
-.validationErrors{
-  font-size: 12px;
+
+.validationErrors {
+  font-size: 11px;
   color: red;
 }
 
 [dir="rtl"] .p-autocomplete-option {
   text-align: right;
+  font-size: 0.9rem;
 }
+
 .p-autocomplete-overlay {
   max-width: 200px !important;
+  font-size: 0.9rem;
 }
 </style>

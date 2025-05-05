@@ -31,6 +31,9 @@ const routes = [
     path: "/login",
     name: "Login",
     component: Login,
+    meta: { 
+      isLoginPage: true
+    }
   },
   ...authRoutes,
 ];

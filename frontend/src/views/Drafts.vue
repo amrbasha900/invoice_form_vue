@@ -68,18 +68,36 @@
 
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, inject, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { useToast } from "primevue/usetoast";
 
 const drafts = ref([]);
 const router = useRouter();
+const toast = useToast();
+
+const $permissions = inject("$permissions");
 
 const viewInvoice = (invoice) => {
   router.push(`/invoice?invoice_name=${invoice.name}`);
 };
 
 onMounted(async () => {
+  // ❌ Block if user lacks permission
+  if (!$permissions?.hasPermission("can_show_drafts")) {
+    toast.add({
+      severity: "error",
+      summary: "Access Denied",
+      detail: "You do not have permission to view draft invoices.",
+      life: 3000,
+    });
+
+    // Optional: redirect to Home or another safe page
+    router.push({ name: "Home" });
+    return;
+  }
+
   try {
     const res = await axios.get(
       "/api/method/invoice_form_vue.api.get_draft_invoice_form"
@@ -90,6 +108,7 @@ onMounted(async () => {
   }
 });
 </script>
+
 <style scoped>
 .drafts-form {
   margin: 50px auto;

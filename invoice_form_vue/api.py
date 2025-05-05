@@ -3,6 +3,8 @@ import frappe
 import json
 from frappe import _
 import frappe.translate
+import datetime
+
 
 @frappe.whitelist()
 def get_suppliers_and_customers():
@@ -82,6 +84,7 @@ def get_invoice(invoice_name):
         "supplier_name": frappe.db.get_value("Supplier", doc.get("supplier"), "supplier_name"),
         "customer": doc.customer,
         "customer_name": frappe.db.get_value("Customer", doc.customer, "customer_name") or '',
+        "is_draft": doc.is_draft,
         "items": []
     }
 
@@ -119,14 +122,53 @@ def remove_from_invoice(invoice_name):
 @frappe.whitelist()
 def get_draft_invoice_form():
     """
-    Retrieve all draft invoices for the current user.
+    Retrieve invoices for the current user based on permission settings.
     Returns a list of invoice objects with basic information.
     """
     try:
-        # Get all draft invoices
+        # Check user permission from Invoice Form Permission Details
+        user_permissions = frappe.get_all(
+            "Invoice Form Permission Details",
+            filters={"user": frappe.session.user},
+            fields=["parent", "show_drafts", "show_submitted", "update_draft_invoice", "view_draft_hour"]
+        )
+        
+        # Default filters
+        filters = {"owner": frappe.session.user, "docstatus":0}
+        
+        # Process permissions
+        show_drafts = False
+        show_submitted = False
+        view_draft_hour = 0
+        
+        if user_permissions:
+            permission = user_permissions[0]
+            show_drafts = permission.get("show_drafts", 0)
+            show_submitted = permission.get("show_submitted", 0)
+            view_draft_hour = permission.get("view_draft_hour", 0)
+        
+        # If user has no permissions to see any invoices, return empty list
+        if not show_drafts and not show_submitted:
+            return {"invoices": []}
+        
+        # Build docstatus filter based on permissions
+        docstatus_filter = []
+        if show_drafts:
+            docstatus_filter.append(1)  # Include drafts
+        if show_submitted:
+            docstatus_filter.append(0)  # Include submitted
+        
+        filters["is_draft"] = ["in", docstatus_filter]
+        
+        # Add time filter based on view_draft_hour if applicable
+        if view_draft_hour > 0:
+            hours_ago = datetime.datetime.now() - datetime.timedelta(hours=view_draft_hour)
+            filters["creation"] = [">", hours_ago]
+        
+        # Get invoices based on filters
         invoices = frappe.get_all(
-            "Invoice Form",  # Use your actual doctype name here
-            filters={"docstatus": 0, 'is_draft':1, 'owner': frappe.session.user},  # docstatus 0 means draft
+            "Invoice Form",
+            filters=filters,
             fields=[
                 "name", 
                 "posting_date", 
@@ -134,7 +176,9 @@ def get_draft_invoice_form():
                 "customer_name", 
                 "supplier", 
                 "supplier_name",
-                "modified"
+                "modified",
+                "docstatus",
+                "is_draft"
             ],
             order_by="modified desc",
             ignore_permissions=False
@@ -148,7 +192,7 @@ def get_draft_invoice_form():
             
             # Get items count
             items = frappe.get_all(
-                "Invoice Form Item",  # Use your actual child doctype name here
+                "Invoice Form Item",
                 filters={"parent": invoice.name},
                 fields=["name"]
             )
@@ -157,7 +201,7 @@ def get_draft_invoice_form():
         return {"invoices": invoices}
     
     except Exception as e:
-        frappe.log_error(frappe.get_traceback(), _("Failed to fetch draft invoices"))
+        frappe.log_error(frappe.get_traceback(), _("Failed to fetch invoices"))
         return {"error": str(e), "invoices": []}
 
 @frappe.whitelist()
@@ -237,3 +281,60 @@ def set_user_language(language):
     frappe.db.set_value("User", user, "language", language)
     frappe.clear_cache(user=user)
     return {"status": "success", "language": language}
+
+
+
+
+@frappe.whitelist()
+def check_user_permission(user):
+    """Check user permissions for Invoice Form app"""
+    if not user:
+        return {
+            "can_login": False,
+            "can_delete_invoice": False,
+            "can_submit_invoice": False,
+            "can_update_draft": False,
+            "can_update_submitted": False,
+            "can_show_drafts": False,
+            "can_show_submitted": False
+        }
+    
+    # Query the Invoice Form Permission Details for this user
+    permission_record = frappe.db.sql("""
+        SELECT 
+            login,
+            delete_invoice,
+            submit_invoice,
+            update_draft_invoice,
+            update_submitted_invoice,
+            show_drafts,
+            show_submitted
+        FROM `tabInvoice Form Permission Details` 
+        WHERE user = %s
+    """, (user,), as_dict=1)
+    
+    # Default permissions if no record found
+    permissions = {
+        "can_login": False,
+        "can_delete_invoice": False,
+        "can_submit_invoice": False,
+        "can_update_draft": False,
+        "can_update_submitted": False,
+        "can_show_drafts": False,
+        "can_show_submitted": False
+    }
+    
+    # Update with actual permissions if record exists
+    if permission_record:
+        record = permission_record[0]
+        permissions = {
+            "can_login": record.login == 1,
+            "can_delete_invoice": record.delete_invoice == 1,
+            "can_submit_invoice": record.submit_invoice == 1,
+            "can_update_draft": record.update_draft_invoice == 1,
+            "can_update_submitted": record.update_submitted_invoice == 1,
+            "can_show_drafts": record.show_drafts == 1,
+            "can_show_submitted": record.show_submitted == 1
+        }
+    
+    return permissions

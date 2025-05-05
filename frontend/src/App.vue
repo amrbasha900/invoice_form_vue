@@ -1,10 +1,9 @@
 <template>
-
   <div :dir="dir" class="min-h-screen bg-gray-50">
-        <Toast position="top-right" />
+    <Toast position="top-right" />
 
-    <!-- HEADER -->
-    <header class="bg-white shadow-sm">
+    <!-- HEADER - Only show when not on login page -->
+    <header v-if="!isLoginPage && isLoggedIn" class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <Menubar :model="menuItems" :key="locale" class="border-0 custom-menubar">
           <template #start>
@@ -28,17 +27,25 @@
 </template>
 
 <script setup>
-import { ref,computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+
 const route = useRoute()
+const $auth = inject('$auth') // Inject auth service
 
 const { t, locale } = useI18n()
 
 const storedLang = localStorage.getItem('preferredLang') || 'en'
 
 const dir = computed(() => (locale.value === 'ar' ? 'rtl' : 'ltr'))
+
+// Check if current route is login page
+const isLoginPage = computed(() => route.name === 'Login')
+
+// Check if user is logged in
+const isLoggedIn = computed(() => $auth.isLoggedIn)
 
 // optional, apply it globally too:
 watch(locale, (lang) => {
@@ -73,8 +80,6 @@ const menuItems = computed(() => [
     class: route.path === '/settings' ? 'active-menu-item' : ''
   }
 ])
-
-
 </script>
 
 
@@ -147,69 +152,41 @@ const menuItems = computed(() => [
   border-radius: 6px;
 }
 
-/* Mobile toast styles */
+/* Modify the toast styles in your <style> section */
 .p-toast {
   width: 100%;
-  max-width: 400px;
+  max-width: 300px; /* Reduced from 400px */
   margin: 0 auto;
 }
 
-.p-toast-top {
-  top: env(safe-area-inset-top, 10px) !important;
-  left: 0;
-  right: 0;
-  align-items: center;
-}
-
 .p-toast-message {
-  margin: 0 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin: 0 0.75rem; /* Reduced from 1rem */
+  border-radius: 6px; /* Slightly smaller radius */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Lighter shadow */
   border-width: 0;
 }
 
 .p-toast-message-content {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem; /* Reduced padding */
   display: flex;
   align-items: center;
 }
 
 .p-toast-message-text {
-  margin-left: 0.5rem;
+  margin-left: 0.375rem; /* Reduced margin */
 }
 
 .p-toast-message-icon {
-  font-size: 1.5rem;
+  font-size: 1rem; /* Reduced from 1.5rem */
 }
 
 .p-toast-summary {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.5rem; /* Reduced from 1rem */
 }
 
 .p-toast-detail {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-}
-
-/* Custom colors for different toast types */
-.p-toast-message-success {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.p-toast-message-error {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.p-toast-message-info {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.p-toast-message-warn {
-  background-color: #fff3cd;
-  color: #856404;
+  margin-top: 0.125rem; /* Reduced from 0.25rem */
+  font-size: 0.75rem; /* Reduced from 0.875rem */
 }
 </style>

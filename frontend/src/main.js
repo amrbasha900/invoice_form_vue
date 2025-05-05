@@ -13,7 +13,7 @@ import call from "./controllers/call";
 import Auth from "./controllers/auth";
 import AppState from './plugins/appState.js';
 import Noir from './presets/Noir.js';
-
+import Permissions from './controllers/permission.js';
 import '@primeuix/themes/nora';
 import 'primeicons/primeicons.css';
 
@@ -61,11 +61,16 @@ async function initApp() {
   // 🔨 Mount app after init
   const app = createApp(App);
   const auth = reactive(new Auth());
-
+  const permissions = new Permissions();
+  if (auth.isLoggedIn) {
+    permissions.loadPermissions(auth.cookie.user_id);
+  }
   app.use(router);
   app.use(i18n);
 
   app.provide("$auth", auth);
+  app.provide('$permissions', permissions);
+
   app.provide("$call", call);
 
   app.use(PrimeVue, {
@@ -101,21 +106,28 @@ async function initApp() {
   app.component('IftaLabel', IftaLabel);
 
   // Route guards
-  router.beforeEach(async (to, from, next) => {
-    if (to.matched.some((record) => !record.meta.isLoginPage)) {
-      if (!auth.isLoggedIn) {
-        next({ name: 'Login', query: { route: to.path } });
-      } else {
-        next();
-      }
-    } else {
-      if (auth.isLoggedIn) {
-        next({ name: 'Home' });
-      } else {
-        next();
-      }
-    }
-  });
+  // In main.js - Update the router guard
+// In main.js - Simplify router guard
+router.beforeEach((to, from, next) => {
+  console.log(`Navigation from ${from.path} to ${to.path}, isLoggedIn: ${auth.isLoggedIn}`);
+  
+  // Check if the route requires authentication
+  const requiresAuth = !to.matched.some(record => record.meta.isLoginPage);
+  
+  if (requiresAuth && !auth.isLoggedIn) {
+    // Route requires auth but user is not logged in
+    console.log('Redirecting to login');
+    next({ name: 'Login', query: { route: to.path } });
+  } else if (!requiresAuth && auth.isLoggedIn) {
+    // Login page but user is already logged in
+    console.log('Redirecting to home');
+    next({ name: 'Home' });
+  } else {
+    // Normal navigation
+    console.log('Proceeding with navigation');
+    next();
+  }
+});
 
   app.mount("#app");
 }

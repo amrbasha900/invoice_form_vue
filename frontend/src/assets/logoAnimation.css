@@ -1,0 +1,65 @@
+/* 
+  Place this CSS file in your assets folder and import it in your main.js
+  or directly in your Home.vue component with:
+  import '@/assets/logoAnimation.css';
+*/
+
+/* Animation for the main logo */
+.logo-animation {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  /* Float animation */
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  
+  /* Animation for hexagon parts of the SVG */
+  #Layer1 path.s1 {
+    transform-origin: center;
+    animation: pulse 3s infinite ease-in-out;
+  }
+  
+  /* Pulse animation for the blue elements */
+  @keyframes pulse {
+    0% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.7;
+    }
+  }
+  
+  /* Animation for individual hexagons with different delays */
+  [id^="Path"]:nth-child(odd) {
+    animation-delay: 0.5s;
+  }
+  
+  [id^="Path"]:nth-child(even) {
+    animation-delay: 1s;
+  }
+  
+  /* Animation for the text elements */
+  .s0 {
+    animation: fadeIn 2s ease-in-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
