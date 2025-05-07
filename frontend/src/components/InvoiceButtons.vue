@@ -1,17 +1,12 @@
+<!-- components/InvoiceButtons.vue -->
 <template>
   <div class="mt-6">
     <!-- <Button 
-      v-if="isInvoiceNew && canSave" 
-      :label="$t('saveInvoice')" 
+      v-if="canSave"
+      :label="isInvoiceNew ? $t('saveInvoice') : $t('update')" 
+      icon="pi pi-save"
       @click="$emit('save')" 
       class="w-full" 
-    />
-
-    <Button 
-      v-if="!isInvoiceNew && canSave" 
-      :label="$t('update')" 
-      @click="$emit('save')" 
-      class="w-full mt-2" 
     /> -->
 
     <Button 

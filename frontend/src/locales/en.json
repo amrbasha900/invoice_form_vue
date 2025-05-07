@@ -185,6 +185,10 @@
   "invalidCredentials": "Invalid username or password",
   "loginError": "Unable to login at this time",
   "tryAgainLater": "Please try again later",
-  "total": "Total Amount"
-
+  "total": "Total Amount",
+  "loading": "Loading...",
+  
+  "accessRestricted": "Access Restricted",
+  "noPermissionToViewDrafts": "You do not have permission to view draft invoices."
+  
 }

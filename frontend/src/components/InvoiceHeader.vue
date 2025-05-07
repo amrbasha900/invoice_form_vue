@@ -24,6 +24,7 @@
                 :forceSelection="true"
                 :completeOnFocus="true"
                 class="w-full"
+                :disabled="disabled"
               />
               <label for="supplier">{{ $t('supplier') }}</label>
             </FloatLabel>
@@ -38,7 +39,7 @@
               @click="clearSupplier"
               type="button"
               aria-label="Clear supplier"
-              :disabled="!localSupplier"
+              :disabled="disabled || !localSupplier"
             />
           </div>
         </div>
@@ -60,7 +61,8 @@
                 @complete="searchCustomer" 
                 :forceSelection="true" 
                 :completeOnFocus="true"
-                class="w-full" 
+                class="w-full"
+                :disabled="disabled"
               />
               <label for="customer">{{ $t('customer') }}</label>
             </FloatLabel>
@@ -75,7 +77,7 @@
               @click="clearMainCustomer" 
               type="button"
               aria-label="Clear customer" 
-              :disabled="!localCustomer" 
+              :disabled="disabled || !localCustomer" 
             />
           </div>
         </div>
@@ -115,6 +117,10 @@ const props = defineProps({
   validationErrors: {
     type: Object,
     default: () => ({})
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -131,6 +137,7 @@ const localSupplier = computed({
     return props.supplier;
   },
   set(value) {
+    if (props.disabled) return;
     emit('update:supplier', value);
     emit('clear-supplier'); // To mark the form as dirty
   }
@@ -141,6 +148,7 @@ const localCustomer = computed({
     return props.customer;
   },
   set(value) {
+    if (props.disabled) return;
     emit('update:customer', value);
     emit('clear-customer'); // To mark the form as dirty
   }
@@ -148,6 +156,8 @@ const localCustomer = computed({
 
 // Methods
 const searchSupplier = (event) => {
+  if (props.disabled) return;
+  
   const query = event.query.toLowerCase();
   supplierSuggestions.value = props.allSuppliers.filter((s) =>
     s.label.toLowerCase().includes(query)
@@ -155,6 +165,8 @@ const searchSupplier = (event) => {
 };
 
 const searchCustomer = (event) => {
+  if (props.disabled) return;
+  
   const query = event.query?.toLowerCase() || "";
   customerSuggestions.value = !query
     ? props.allCustomers.slice(0, 5)
@@ -162,11 +174,15 @@ const searchCustomer = (event) => {
 };
 
 const clearSupplier = () => {
+  if (props.disabled) return;
+  
   emit('update:supplier', "");
   emit('clear-supplier');
 };
 
 const clearMainCustomer = () => {
+  if (props.disabled) return;
+  
   emit('update:customer', "");
   emit('clear-customer');
 };
@@ -226,5 +242,11 @@ const clearMainCustomer = () => {
 /* Make dropdown panel more compact */
 :deep(.p-autocomplete-panel .p-autocomplete-items) {
   padding: 0.2rem !important;
+}
+
+/* Style for disabled inputs */
+:deep(.p-disabled) {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>

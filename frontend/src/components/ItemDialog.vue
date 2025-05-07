@@ -48,7 +48,8 @@
               @complete="searchItem" 
               :forceSelection="true" 
               :completeOnFocus="true" 
-              class="w-full" 
+              class="w-full"
+              :disabled="!canEditItem"
             />
             <label for="item">{{ t('itemCode') }}</label>
           </FloatLabel>
@@ -63,7 +64,7 @@
             @click="clearItem"
             type="button"
             aria-label="Clear item"
-            :disabled="!item.item"
+            :disabled="!canEditItem || !item.item"
           />
         </div>
       </div>
@@ -82,6 +83,7 @@
               inputmode="decimal"
               type="text"
               pattern="[0-9]*[.,]?[0-9]*"
+              :disabled="!canEditItem"
             />
             <label for="qty">{{ t('qty') }}</label>
           </FloatLabel>
@@ -99,6 +101,7 @@
               inputmode="decimal"
               type="text"
               pattern="[0-9]*[.,]?[0-9]*"
+              :disabled="!canEditItem"
             />
             <label for="rate">{{ t('rate') }}</label>
           </FloatLabel>
@@ -133,6 +136,7 @@
                 :forceSelection="true"
                 :completeOnFocus="true"
                 class="w-full"
+                :disabled="!canEditItem"
               />
               <label for="Customer">{{ t('customer') }}</label>
             </FloatLabel>
@@ -147,7 +151,7 @@
               @click="clearCustomer"
               type="button"
               aria-label="Clear customer"
-              :disabled="!item.customer"
+              :disabled="!canEditItem || !item.customer"
             />
           </div>
         </div>
@@ -157,30 +161,27 @@
       </div>
       
       <div class="grid grid-cols-3 gap-2 mt-4">
-  <div class="col-span-1">
-    <Button 
-      v-if="canEditItem"
-      :label="editIndex !== null ? t('update') : t('add')" 
-      @click="saveItem" 
-      class="w-full" 
-    />
-  </div>
+        <div class="col-span-1">
+          <Button 
+            v-if="canEditItem"
+            :label="editIndex !== null ? t('update') : t('add')" 
+            @click="saveItem" 
+            class="w-full" 
+          />
+        </div>
 
-  <div class="col-span-1"></div>
+        <div class="col-span-1"></div>
 
-  <div class="col-span-1" v-if="editIndex !== null && canDeleteItem">
-    <Button 
-  v-if="editIndex !== null && canDeleteRow"
-  :label="t('delete')" 
-  icon="pi pi-trash" 
-  severity="danger"
-  @click="handleDelete" 
-  class="w-full" 
-/>
-    
-  </div>
-</div>
-
+        <div class="col-span-1" v-if="editIndex !== null && canDeleteItem">
+          <Button 
+            :label="t('delete')" 
+            icon="pi pi-trash" 
+            severity="danger"
+            @click="handleDelete" 
+            class="w-full" 
+          />
+        </div>
+      </div>
     </div>
   </Dialog>
 </template>
@@ -283,14 +284,23 @@ const handleNextRow = () => {
     emit('navigate-row', props.editIndex + 1);
   }
 };
+
+// Check if user can edit items
 const canEditItem = computed(() => {
   if (props.isDraft) return props.canUpdateDraft;
   return props.canUpdateSubmitted;
 });
 
+// Check if user can delete items
 const canDeleteItem = computed(() => {
-  return props.canDeleteInvoice && (props.isDraft || !props.isDraft); // Adjust logic if needed
+  return props.canDeleteInvoice && canDeleteRow.value;
 });
+
+// Check if the current row can be deleted
+const canDeleteRow = computed(() => {
+  return props.isDraft && props.canUpdateDraft;
+});
+
 // Initialize local item from props
 onMounted(() => {
   Object.keys(props.itemData).forEach(key => {
@@ -315,6 +325,8 @@ const qtyInput = computed({
     return item.qty === 0 && !item.qtyEditing ? '' : item.qty.toString();
   },
   set(value) {
+    if (!canEditItem.value) return;
+    
     item.qtyEditing = true;
     
     // If the field is being cleared (empty or just a decimal point), allow it
@@ -360,6 +372,8 @@ const rateInput = computed({
     return item.rate === 0 && !item.rateEditing ? '' : item.rate.toString();
   },
   set(value) {
+    if (!canEditItem.value) return;
+    
     item.rateEditing = true;
     
     // If the field is being cleared (empty or just a decimal point), allow it
@@ -420,6 +434,8 @@ watch(
 
 // Methods
 const searchItem = (event) => {
+  if (!canEditItem.value) return;
+  
   const query = event.query.toLowerCase();
   itemSuggestions.value = props.allItems.filter((i) =>
     i.label.toLowerCase().includes(query)
@@ -427,6 +443,8 @@ const searchItem = (event) => {
 };
 
 const searchCustomer = (event) => {
+  if (!canEditItem.value) return;
+  
   const query = event.query?.toLowerCase() || "";
   customerSuggestions.value = !query
     ? props.allCustomers.slice(0, 5)
@@ -434,11 +452,15 @@ const searchCustomer = (event) => {
 };
 
 const clearCustomer = () => {
+  if (!canEditItem.value) return;
+  
   item.customer = "";
   emit('clear-customer');
 };
 
 const saveItem = () => {
+  if (!canEditItem.value) return;
+  
   const itemData = {
     item: item.item,
     qty: item.qty,
@@ -451,8 +473,9 @@ const saveItem = () => {
   emit('save-item', itemData);
 };
 
-
 const handleDelete = () => {
+  if (!canDeleteItem.value) return;
+  
   confirm.require({
     message: t('confirmDeleteItem'),
     header: t('confirmDelete'),
@@ -467,13 +490,15 @@ const handleDelete = () => {
       toast.add({
         severity: "info",
         summary: t('cancelled'),
-        //detail: t('deleteCancelled'),
         life: 2000,
       });
     },
   });
 };
+
 const clearItem = () => {
+  if (!canEditItem.value) return;
+  
   item.item = "";
   // Reset related fields if needed
   item.qty = "";
@@ -483,9 +508,6 @@ const clearItem = () => {
   item.rateEditing = false;
   emit('clear-item');
 };
-const canDeleteRow = computed(() => {
-  return props.isDraft && props.canUpdateDraft;
-});
 </script>
 
 <style scoped>

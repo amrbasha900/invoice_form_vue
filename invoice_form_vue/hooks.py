@@ -148,10 +148,10 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"invoice_form_vue.tasks.all"
-# 	],
+scheduler_events = {
+ 	"all": [
+ 		"invoice_form_vue.tasks.check_lock_update_invoice_form"
+ 	],
 # 	"daily": [
 # 		"invoice_form_vue.tasks.daily"
 # 	],
@@ -164,7 +164,7 @@ app_license = "mit"
 # 	"monthly": [
 # 		"invoice_form_vue.tasks.monthly"
 # 	],
-# }
+}
 
 # Testing
 # -------

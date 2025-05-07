@@ -5,18 +5,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "view_draft_hour",
+  "can_not_edit_after",
   "column_break_ysac",
   "user_permission_section",
   "invoice_form_permission_details"
  ],
  "fields": [
-  {
-   "fieldname": "view_draft_hour",
-   "fieldtype": "Int",
-   "label": "View Draft Hour",
-   "non_negative": 1
-  },
   {
    "fieldname": "column_break_ysac",
    "fieldtype": "Column Break"
@@ -27,17 +21,24 @@
    "label": "User Permission"
   },
   {
+   "allow_bulk_edit": 1,
    "fieldname": "invoice_form_permission_details",
    "fieldtype": "Table",
    "label": "Invoice Form Permission Details",
    "options": "Invoice Form Permission Details"
+  },
+  {
+   "fieldname": "can_not_edit_after",
+   "fieldtype": "Time",
+   "label": "Can Not Edit After",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-05-01 02:03:09.010587",
+ "modified": "2025-05-06 22:29:00.637553",
  "modified_by": "Administrator",
  "module": "Invoice Form Vue",
  "name": "Invoice Form Permission",

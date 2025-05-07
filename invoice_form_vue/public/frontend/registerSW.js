@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/assets/invoice_form_vue/frontend/sw.js', { scope: '/assets/invoice_form_vue/frontend/' })})}

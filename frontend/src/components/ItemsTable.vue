@@ -2,7 +2,7 @@
 <template>
   <div>
     <DataTable :value="items" class="w-full mt-4 compact-table" responsiveLayout="scroll" @row-click="onRowClick"
-      :rowHover="true" stripedRows :scrollable="true" scrollHeight="400px">
+      :rowHover="canUpdateDraft" :rowClass="rowClass" :scrollable="true" scrollHeight="400px">
       <Column field="item" :header="$t('item')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ slotProps.data.item?.label || slotProps.data.item }}
@@ -11,34 +11,37 @@
       <Column field="qty" :header="$t('qty')" headerClass="text-center" bodyClass="text-center" />
       <Column field="rate" :header="$t('rate')" headerClass="text-center" bodyClass="text-center" />
       <Column :header="$t('amount')" headerClass="text-center" bodyClass="text-center">
-  <template #body="slotProps">
-    {{ formatAmount(slotProps.data.amount) }}
-  </template>
-</Column>      <Column :header="$t('customer')" headerClass="text-center" bodyClass="text-center">
+        <template #body="slotProps">
+          {{ formatAmount(slotProps.data.amount) }}
+        </template>
+      </Column>
+      <Column :header="$t('customer')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ slotProps.data.customer?.label || slotProps.data.customer }}
         </template>
       </Column>
     </DataTable>
 
-    <div class="mt-4 grid grid-cols-2 items-center">
-  <!-- Left: Add Item Button -->
-  <div class="text-right">
-    <Button
-      v-if="isDraft && canUpdateDraft"
-      :label="$t('addItem')"
-      icon="pi pi-plus"
-      class="p-button-sm whitespace-nowrap"
-      @click="$emit('add-item')"
-    />
-  </div>
+    <div class="mt-4 grid grid-cols-2 items-center" style="direction: ltr;">
+      <!-- Right: Total Amount -->
+      <div class="text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
+        {{ $t('total') }}: {{ totalAmountFormatted }}
+      </div>
+      
+      <!-- Left: Add Item Button -->
+      
+      <div class="text-right">
+        <Button
+          v-if="isDraft && canUpdateDraft"
+          :label="$t('addItem')"
+          icon="pi pi-plus"
+          class="p-button-sm whitespace-nowrap"
+          @click="$emit('add-item')"
+        />
+      </div>
 
-  <!-- Right: Total Amount -->
-  <div class="text-left text-sm font-semibold text-gray-700 whitespace-nowrap">
-    {{ $t('total') }}: {{ totalAmountFormatted  }}
-  </div>
-</div>
-
+      
+    </div>
   </div>
 </template>
 
@@ -48,6 +51,7 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import { computed } from 'vue';
+
 // Define props
 const props = defineProps({
   items: {
@@ -80,19 +84,35 @@ const formatCurrency = (value) => {
 
 // Handle row click
 const onRowClick = (event) => {
-  emit('row-click', event);
+  // Only emit row click event if the user has permission to update
+  if (props.canUpdateDraft) {
+    emit('row-click', event);
+  }
 };
+
+// Set row class based on whether the row is clickable
+const rowClass = (data) => {
+  return {
+    'cursor-default': !props.canUpdateDraft,
+    'cursor-pointer': props.canUpdateDraft
+  };
+};
+
+// Calculate total amount
 const totalAmount = computed(() => {
   return props.items.reduce((sum, item) => sum + (item.amount || 0), 0);
 });
+
+// Format total amount for display
 const totalAmountFormatted = computed(() => {
   return totalAmount.value.toFixed(2);
 });
+
+// Format individual amount for display
 const formatAmount = (value) => {
   if (value == null || isNaN(value)) return '0.00';
   return Number(value).toFixed(2);
 };
-
 </script>
 
 <style scoped>
@@ -125,12 +145,16 @@ const formatAmount = (value) => {
 :deep(.compact-table .p-datatable-tbody > tr) {
   /* Reduced row height */
   height: 2rem !important;
-  cursor: pointer;
 }
 
-/* Hover effect for better UX */
-:deep(.compact-table .p-datatable-tbody > tr:hover) {
+/* Hover effect for better UX - only when editable */
+:deep(.compact-table .p-datatable-tbody > tr.cursor-pointer:hover) {
   background-color: #f5f5f5 !important;
+}
+
+/* No hover effect when not editable */
+:deep(.compact-table .p-datatable-tbody > tr.cursor-default:hover) {
+  background-color: inherit !important;
 }
 
 /* Striped rows */

@@ -85,6 +85,7 @@ def get_invoice(invoice_name):
         "customer": doc.customer,
         "customer_name": frappe.db.get_value("Customer", doc.customer, "customer_name") or '',
         "is_draft": doc.is_draft,
+        "lock_update": doc.lock_update,
         "items": []
     }
 

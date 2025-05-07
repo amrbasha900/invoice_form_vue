@@ -1,8 +1,23 @@
+<!-- views/Drafts.vue -->
 <template>
   <div class="max-w-5xl mx-auto p-4 drafts-form">
     <div class="card">
+      <!-- Loading state -->
+      <div v-if="loading" class="text-center p-4">
+        <i class="pi pi-spin pi-spinner text-2xl"></i>
+        <div class="mt-2">{{ $t('loading') || 'Loading...' }}</div>
+      </div>
+      
+      <!-- Permission denied message -->
+      <div v-else-if="!hasPermission" class="text-center text-gray-500 mt-10">
+        <i class="pi pi-lock text-3xl text-gray-400 mb-3"></i>
+        <div class="font-semibold">{{ $t('accessRestricted') || 'Access Restricted' }}</div>
+        <p class="mt-2">{{ $t('noPermissionToViewDrafts') || 'You do not have permission to view draft invoices.' }}</p>
+      </div>
+      
+      <!-- Draft list (only shown if user has permission) -->
       <DataView
-        v-if="drafts.length > 0"
+        v-else-if="hasPermission && drafts.length > 0"
         :value="drafts"
         layout="list"
         :paginator="true"
@@ -11,7 +26,7 @@
         <template #list="slotProps">
           <div class="flex flex-col">
             <!-- Draft invoice card -->
-            <div v-for="(item, index) in slotProps.items" :key="item.name"  class="mb-4">
+            <div v-for="(item, index) in slotProps.items" :key="item.name" class="mb-4">
               <!-- Invoice Details -->
               <div
                 class="grid grid-cols-[80%_20%] items-center rounded-lg shadow-sm p-4 bg-white mb-4"
@@ -58,54 +73,59 @@
         </template>
       </DataView>
 
-      <div v-else class="text-center text-gray-500 mt-10">
+      <!-- No drafts message (only shown if user has permission) -->
+      <div v-else-if="hasPermission && !loading" class="text-center text-gray-500 mt-10">
         {{ $t('noDraftInvoicesAvailable') }}
-         
       </div>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import { ref, inject, onMounted } from "vue";
+import { ref, inject, onMounted, computed } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
-import { useToast } from "primevue/usetoast";
+import Button from "primevue/button";
+import DataView from "primevue/dataview";
 
 const drafts = ref([]);
+const loading = ref(true);
 const router = useRouter();
-const toast = useToast();
 
 const $permissions = inject("$permissions");
+
+// Computed property to check if user has permission
+const hasPermission = computed(() => {
+  return $permissions?.hasPermission("can_show_drafts") || false;
+});
 
 const viewInvoice = (invoice) => {
   router.push(`/invoice?invoice_name=${invoice.name}`);
 };
 
-onMounted(async () => {
-  // ❌ Block if user lacks permission
-  if (!$permissions?.hasPermission("can_show_drafts")) {
-    toast.add({
-      severity: "error",
-      summary: "Access Denied",
-      detail: "You do not have permission to view draft invoices.",
-      life: 3000,
-    });
-
-    // Optional: redirect to Home or another safe page
-    router.push({ name: "Home" });
-    return;
-  }
-
+// Load drafts if user has permission
+const loadData = async () => {
+  loading.value = true;
+  
   try {
-    const res = await axios.get(
-      "/api/method/invoice_form_vue.api.get_draft_invoice_form"
-    );
-    drafts.value = res.data.message?.invoices || [];
+    // Only fetch data if user has permission
+    if (hasPermission.value) {
+      const res = await axios.get(
+        "/api/method/invoice_form_vue.api.get_draft_invoice_form"
+      );
+      drafts.value = res.data.message?.invoices || [];
+    }
   } catch (err) {
     console.error("Error fetching drafts:", err);
+  } finally {
+    loading.value = false;
   }
+};
+
+onMounted(async () => {
+  // Small delay to ensure permissions have loaded
+  await new Promise(resolve => setTimeout(resolve, 100));
+  loadData();
 });
 </script>
 

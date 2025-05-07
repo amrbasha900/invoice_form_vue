@@ -1,4 +1,4 @@
-<!-- views/InvoiceForm.vue (Navigation Fix) -->
+<!-- views/InvoiceForm.vue (Permissions Fix) -->
 <template>
   <div class="invoice-form max-w-2xl mx-auto p-4">
     <form @submit.prevent="saveInvoice">
@@ -12,27 +12,28 @@
         :validation-errors="validationErrors"
         @clear-supplier="onClearSupplier"
         @clear-customer="onClearCustomer"
+        :disabled="isEditingDisabled"
       />
 
       <!-- Items Table -->
       <ItemsTable
-  :items="invoice.items"
-  :is-draft="isDraft"
-  :can-update-draft="$permissions?.hasPermission('can_update_draft')"
-  @row-click="onRowClick"
-  @add-item="openAddDialog"
-/>
+        :items="invoice.items"
+        :is-draft="isDraft"
+        :can-update-draft="canEditInvoice"
+        @row-click="onRowClick"
+        @add-item="openAddDialog"
+      />
 
       <!-- Action Buttons -->
       <InvoiceButtons
-  :is-invoice-new="!invoiceName"
-  @save="handleSaveInvoice"
-  @delete="deleteInvoice"
-  @submit="submitInvoice"
-  :can-save="$permissions?.hasPermission(isDraft ? 'can_update_draft' : 'can_update_submitted')"
-  :can-delete="$permissions?.hasPermission('can_delete_invoice') && isDraft"
-  :can-submit="$permissions?.hasPermission('can_submit_invoice') && isDraft"
-/>
+        :is-invoice-new="!invoiceName"
+        @save="handleSaveInvoice"
+        @delete="deleteInvoice"
+        @submit="submitInvoice"
+        :can-save="canEditInvoice"
+        :can-delete="canDeleteInvoice"
+        :can-submit="canSubmitInvoice"
+      />
     </form>
 
     <!-- Add/Edit Item Dialog with added totalRows prop -->
@@ -50,19 +51,16 @@
       @clear-customer="isDirty = false"
       @navigate-row="handleRowNavigation" 
       @clear-item="isDirty = false"
-       :is-draft="isDraft"
-      :can-update-draft="$permissions.hasPermission('can_update_draft')"
-      :can-update-submitted="$permissions.hasPermission('can_update_submitted')"
-      :can-delete-invoice="$permissions.hasPermission('can_delete_invoice')"
+      :is-draft="isDraft"
+      :can-update-draft="canEditInvoice"
+      :can-update-submitted="canEditInvoice"
+      :can-delete-invoice="canDeleteInvoice"
     />
   </div>
 </template>
 
 <script setup>
-import { inject } from 'vue';
-
-const $permissions = inject('$permissions');
-
+import { inject, computed } from 'vue';
 import { reactive, ref, onMounted, watch } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
@@ -76,6 +74,8 @@ import InvoiceButtons from "../components/InvoiceButtons.vue";
 import ItemDialog from "../components/ItemDialog.vue";
 import { useI18n } from 'vue-i18n';
 
+const $permissions = inject('$permissions');
+
 const { t } = useI18n();
 const route = useRoute();
 const toast = useToast();
@@ -87,6 +87,7 @@ const editIndex = ref(null);
 const isInvoiceNew = ref(true); // Track if the invoice is new
 const isDraft = ref(true);
 const invoiceName = ref(null);
+const invoiceLocked = ref(false); // Add this to track lock_update status
 const invoice = reactive({
   supplier: "",
   customer: "",
@@ -115,6 +116,27 @@ const allSuppliers = ref([]);
 const allCustomers = ref([]);
 const allItems = ref([]);
 
+// Computed permissions
+const canEditInvoice = computed(() => {
+  if (invoiceLocked.value) return false;
+  if (isDraft.value) return $permissions?.hasPermission('can_update_draft');
+  return $permissions?.hasPermission('can_update_submitted');
+});
+
+const canDeleteInvoice = computed(() => {
+  if (invoiceLocked.value) return false;
+  return isDraft.value && $permissions?.hasPermission('can_delete_invoice');
+});
+
+const canSubmitInvoice = computed(() => {
+  if (invoiceLocked.value) return false;
+  return isDraft.value && $permissions?.hasPermission('can_submit_invoice');
+});
+
+const isEditingDisabled = computed(() => {
+  return !canEditInvoice.value;
+});
+
 // NEW FUNCTION: Handle row navigation from dialog
 const handleRowNavigation = (newIndex) => {
   console.log('Navigation requested to row:', newIndex);
@@ -133,7 +155,7 @@ const handleRowNavigation = (newIndex) => {
   
   // Format the data for the dialog
   Object.assign(newItem, {
-    item: { label: rowData.item, code: rowData.item },
+    item: rowData.item?.label ? rowData.item : { label: rowData.item, code: rowData.item },
     qty: rowData.qty,
     rate: rowData.rate,
     customer: rowData.customer,
@@ -189,6 +211,9 @@ const onClearCustomer = () => {
 
 // Open add dialog
 const openAddDialog = () => {
+  // Check if user has permission to update before opening dialog
+  if (!canEditInvoice.value) return;
+  
   resetDialog();
   if (invoice.customer) {
     newItem.customer = invoice.customer;
@@ -198,10 +223,13 @@ const openAddDialog = () => {
 
 // Open edit dialog from row
 const onRowClick = (event) => {
+  // Check if user has permission to edit before opening dialog
+  if (!canEditInvoice.value) return;
+  
   const row = event.data;
   editIndex.value = event.index;
   Object.assign(newItem, {
-    item: { label: row.item, code: row.item },
+    item: row.item?.label ? row.item : { label: row.item, code: row.item },
     qty: row.qty,
     rate: row.rate,
     customer: row.customer,
@@ -211,12 +239,18 @@ const onRowClick = (event) => {
   });
   showItemDialog.value = true;
 };
+
 // In InvoiceForm.vue script
 const handleDeleteItem = async (index) => {
+  // Check permission
+  if (!canDeleteInvoice.value) return;
+  
   if (index !== null && index >= 0 && index < invoice.items.length) {
     // Remove the item from the local array
+    const itemToRemove = invoice.items[index];
     invoice.items.splice(index, 1);
-    const itemName = invoice.items[index].item;
+    const itemName = itemToRemove.item?.label || itemToRemove.item;
+    
     // Update the invoice in the database if it has already been saved
     if (invoiceName.value) {
       try {
@@ -224,7 +258,6 @@ const handleDeleteItem = async (index) => {
         await handleSaveInvoice({
           severity: "success",
           summary: t('itemDeleted'),
-          //detail: t('itemDeletedFromInvoice', { itemName: itemName, invoiceName: invoiceName.value }),
           life: 2000,
         });
       } catch (error) {
@@ -241,7 +274,6 @@ const handleDeleteItem = async (index) => {
       toast.add({
         severity: "success",
         summary: t('deleted'),
-        //detail: t('itemRemoved', { itemName: itemName }),
         life: 2000,
       });
     }
@@ -260,10 +292,12 @@ const handleDeleteItem = async (index) => {
     });
   }
 };
-// Save item (add or update)
-// In InvoiceForm.vue, modify the saveItem function:
 
+// Save item (add or update)
 const saveItem = async (itemFormData) => {
+  // Check permission
+  if (!canEditInvoice.value) return;
+  
   // Update newItem with the data from the dialog
   Object.assign(newItem, itemFormData);
   
@@ -294,21 +328,11 @@ const saveItem = async (itemFormData) => {
   // Prepare the toast message with item name
   const hasInvoice = invoiceName.value && invoiceName.value.trim() !== '';
 
-const toastMessage = {
-  severity: wasEdit ? "success" : "info",
-  summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
-  // detail: wasEdit 
-  //   ? t(hasInvoice ? 'itemUpdateSuccess' : 'itemUpdateSuccessNoInvoice', {
-  //       itemName: itemName,
-  //       invoiceName: invoiceName.value
-  //     })
-  //   : t(hasInvoice ? 'itemAddSuccess' : 'itemAddSuccessNoInvoice', {
-  //       itemName: itemName,
-  //       invoiceName: invoiceName.value
-  //     }),
-  life: 3000,
-};
-
+  const toastMessage = {
+    severity: wasEdit ? "success" : "info",
+    summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
+    life: 3000,
+  };
 
   // If this is a new invoice that hasn't been saved yet, auto-save it first
   if (isInvoiceNew.value && !invoiceName.value) {
@@ -328,7 +352,6 @@ const toastMessage = {
       await handleSaveInvoice({
         severity: "success",
         summary: t('invoiceCreated'),
-        //detail: t('invoiceCreatedWithItem', { itemName: itemName }),
         life: 3000,
       });
       
@@ -409,10 +432,11 @@ const resetInvoiceForm = () => {
   isInvoiceNew.value = true;
 };
 
-
-
 // Save Invoice Logic
 const handleSaveInvoice = async (customToast = null) => {
+  // Check permission
+  if (!canEditInvoice.value) return;
+  
   if (!validateSupplier()) return;
   try {
     const invoiceData = {
@@ -430,7 +454,6 @@ const handleSaveInvoice = async (customToast = null) => {
     if (!customToast) {
       toast.add({
         summary: isInvoiceNew.value ? t('invoiceCreated') : t('invoiceUpdated'),
-        //detail: isInvoiceNew.value ? t('invoiceCreatedSuccessfully') : t('invoiceUpdatedSuccessfully'),
         life: 2000,
       });
     } else {
@@ -463,7 +486,6 @@ const saveInvoice = async (invoiceData) => {
     toast.add({
       severity: "error",
       summary: "Error",
-      //detail: `Error: Failed to save/update invoice.`,
       life: 2000,
     });
     throw new Error(
@@ -473,6 +495,9 @@ const saveInvoice = async (invoiceData) => {
 };
 
 const deleteInvoice = async () => {
+  // Check permission
+  if (!canDeleteInvoice.value) return;
+  
   try {
     confirm.require({
       message: t('confirmDeleteInvoice'),
@@ -489,7 +514,6 @@ const deleteInvoice = async () => {
         toast.add({
           severity: 'success',
           summary: t('invoiceDeleted'),
-          //detail: t('invoiceDeletedDetail'),
           life: 2000,
         });
         resetInvoiceForm();
@@ -506,6 +530,9 @@ const deleteInvoice = async () => {
 };
 
 const submitInvoice = async () => {
+  // Check permission
+  if (!canSubmitInvoice.value) return;
+  
   try {
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.remove_from_invoice",
@@ -514,7 +541,6 @@ const submitInvoice = async () => {
     toast.add({
       severity: "success",
       summary: t('invoiceSubmitted'),
-      //detail: t('invoiceSubmittedDetail'),
       life: 2000,
     });
     resetInvoiceForm();
@@ -538,6 +564,9 @@ const loadInvoice = async (invoiceNameParam) => {
     );
 
     const invoiceData = res.data.message;
+
+    // Set locked status - added this line
+    invoiceLocked.value = invoiceData.lock_update === 1;
 
     invoice.supplier = {
       label: invoiceData.supplier_name,
