@@ -247,6 +247,7 @@ website_route_rules = [{'from_route': '/invoice_form/<path:app_path>', 'to_route
 
 fixtures = [
     {"dt": "Custom Field", "filters": [["name", "in", [
-        "Invoice Form-custom_is_draft","Customer-custom_pamper_user"
+        "Invoice Form-custom_is_draft","Customer-custom_pamper_user",
+        "Invoice Form-custom_lock_update"
         ]]]},
 ]
