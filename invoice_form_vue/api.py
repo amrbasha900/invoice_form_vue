@@ -34,9 +34,10 @@ def create_invoice(invoice_data):
         )
         pamper = None
         if not data.get("invoice_id"):
-            pamper = frappe.db.get_value("Customer", {'pamper_user': frappe.session.user}, "name")
+            #pamper = frappe.db.get_value("Customer", {'pamper_user': frappe.session.user}, "name")
+            pamper_name = frappe.db.sql("select pamper from `tabInvoice Form Permission Details` where user = '"+frappe.session.user+"' ", as_dict=1)
             if pamper:
-                doc.pamper = pamper
+                doc.pamper = pamper_name.pamper
         doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
         doc.posting_date = data.get("posting_date")
 

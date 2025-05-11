@@ -15,6 +15,7 @@
   "update_submitted_invoice",
   "show_drafts",
   "show_submitted",
+  "pamper",
   "view_draft_hour"
  ],
  "fields": [
@@ -84,13 +85,20 @@
    "fieldtype": "Int",
    "label": "View Draft Hour",
    "non_negative": 1
+  },
+  {
+   "fieldname": "pamper",
+   "fieldtype": "Link",
+   "label": "Pamper",
+   "link_filters": "[[\"Customer\",\"is_pamper\",\"=\",1],[\"Customer\",\"is_frozen\",\"=\",0]]",
+   "options": "Customer"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-05-05 01:18:15.488532",
+ "modified": "2025-05-11 12:13:50.620281",
  "modified_by": "Administrator",
  "module": "Invoice Form Vue",
  "name": "Invoice Form Permission Details",
