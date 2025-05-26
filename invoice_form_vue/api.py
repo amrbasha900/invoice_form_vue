@@ -37,7 +37,7 @@ def create_invoice(invoice_data):
             #pamper = frappe.db.get_value("Customer", {'pamper_user': frappe.session.user}, "name")
             pamper_name = frappe.db.sql("select pamper from `tabInvoice Form Permission Details` where user = '"+frappe.session.user+"' ", as_dict=1)
             if pamper_name:
-                doc.pamper = pamper_name.pamper
+                doc.pamper = pamper_name[0].pamper 
             else:
                 frappe.log_error(title="Invoice Form Creation error", message="No Papmer Found in Papmer For User In Invoice Form Permission Details")
         doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
