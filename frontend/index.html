@@ -1,28 +1,24 @@
 <!doctype html>
 <html lang="en">
   <head>
-
-    <link rel="manifest" href="/invoice_form/manifest.webmanifest">
+    <!-- REMOVED: <link rel="manifest" href="/invoice_form/manifest.webmanifest"> -->
+    <!-- VitePWA plugin will automatically inject the manifest link -->
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0d9488">
-<link rel="icon" href="/favicon.ico">
-<meta name="theme-color" content="#ffffff" />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Invoice App">
-<link rel="apple-touch-icon" href="/pwa-192x192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="icon" href="/favicon.ico">
+    <meta name="apple-mobile-web-app-title" content="Invoice App">
+    <link rel="apple-touch-icon" href="/pwa-192x192.png">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-
     <title>Invoice Form</title>
   </head>
   <body>
     <div id="app"></div>
-		<script>window.csrf_token = '{{ frappe.session.csrf_token }}';</script>
+    <script>window.csrf_token = '{{ frappe.session.csrf_token }}';</script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
