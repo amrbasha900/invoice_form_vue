@@ -5,15 +5,37 @@ import { VitePWA } from 'vite-plugin-pwa';
 import vue from '@vitejs/plugin-vue';
 import fs from "fs"
 
-// Detect if we're in production or if HTTPS is required
-const isProduction = process.env.NODE_ENV === 'production';
-const forceHttps = process.env.VITE_FORCE_HTTPS === 'true';
-const useHttps = isProduction || forceHttps;
-
+// https://vitejs.dev/config/
 export default defineConfig({
+	base: '/invoice_form/', // Add base path for proper asset loading
 	plugins: [vue(), tailwindcss(),
     VitePWA({ 
       registerType: 'autoUpdate',
+      workbox: {
+        // Configure service worker to handle SPA routing
+        navigateFallback: '/invoice_form/index.html',
+        navigateFallbackDenylist: [
+          /^\/_/,
+          /\/[^/?]+\.[^/]+$/,
+          /^\/api/,
+          /^\/app/,
+          /^\/login/,
+          /^\/assets/,
+          /^\/files/,
+          /^\/private/
+        ],
+        // Cache strategy for better performance
+        runtimeCaching: [
+          {
+            urlPattern: /^\/invoice_form\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'invoice-app-pages',
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
+      },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Invoice Form App',
@@ -21,17 +43,17 @@ export default defineConfig({
         description: 'Invoice management built with Vue + Frappe',
         theme_color: '#ffffff',
         background_color: '#ffffff',
-        start_url: '/invoice_form/',
+        start_url: '/invoice_form/home', // Updated to point to /home
         scope: '/invoice_form/',
         display: 'standalone',
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: '/invoice_form/pwa-192x192.png', // Updated with base path
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/pwa-512x512.png',
+            src: '/invoice_form/pwa-512x512.png', // Updated with base path
             sizes: '512x512',
             type: 'image/png'
           }
@@ -42,16 +64,7 @@ export default defineConfig({
 	server: {
 		port: 8080,
 		host: '0.0.0.0',
-		...(useHttps && {
-			https: {
-				// Try to use existing certificates, fallback to Vite's built-in
-				...(fs.existsSync('certs/key.pem') && fs.existsSync('certs/cert.pem') ? {
-					key: fs.readFileSync('certs/key.pem'),
-					cert: fs.readFileSync('certs/cert.pem')
-				} : true)
-			}
-		}),
-		proxy: getProxyOptions(useHttps),
+		proxy: getProxyOptions(),
 	},
 	resolve: {
 		alias: {
@@ -62,30 +75,38 @@ export default defineConfig({
 		outDir: '../invoice_form_vue/public/frontend',
 		emptyOutDir: true,
 		target: 'es2015',
+		rollupOptions: {
+			output: {
+				// Ensure proper chunking for better caching
+				manualChunks: {
+					vendor: ['vue', 'vue-router'],
+					ui: ['primevue']
+				}
+			}
+		}
 	},
 });
 
-function getProxyOptions(useHttps = false) {
+function getProxyOptions() {
 	const config = getCommonSiteConfig()
 	const webserver_port = config ? config.webserver_port : 8000
-	const protocol = useHttps ? 'https' : 'http';
 	
 	if (!config) {
 		console.log("No common_site_config.json found, using default port 8000")
 	}
-	console.log(`Using webserver port: ${webserver_port} with ${protocol}`)
+	console.log(`Using webserver port: ${webserver_port}`)
 	
 	return {
 		"^/(app|login|api|assets|files|private)": {
-			target: `${protocol}://localhost:${webserver_port}`,
+			target: `http://localhost:${webserver_port}`,
 			ws: true,
 			changeOrigin: true,
-			secure: !useHttps, // Only secure for actual HTTPS, not self-signed
+			secure: false,
 			timeout: 30000,
 			router: function (req) {
 				const site_name = req.headers.host.split(":")[0]
-				console.log(`Proxying ${req.url} to ${protocol}://localhost:${webserver_port}`)
-				return `${protocol}://localhost:${webserver_port}`
+				console.log(`Proxying ${req.url} to http://localhost:${webserver_port}`)
+				return `http://localhost:${webserver_port}`
 			},
 		},
 	}

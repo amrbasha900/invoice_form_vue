@@ -9,6 +9,10 @@ import authRoutes from './auth';
 const routes = [
   {
     path: "/",
+    redirect: "/home" // Redirect root to /home
+  },
+  {
+    path: "/home", // Changed from "/" to "/home"
     name: "Home",
     component: Home,
   },

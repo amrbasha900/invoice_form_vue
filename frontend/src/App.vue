@@ -59,7 +59,7 @@ const menuItems = computed(() => [
     label: t('menu.home'),
     icon: 'pi pi-home',
     command: () => router.push('/'),
-    class: route.path === '/' ? 'active-menu-item' : ''
+    class: route.path === '/home' ? 'active-menu-item' : ''
   },
   {
     label: t('menu.new_invoice'),
