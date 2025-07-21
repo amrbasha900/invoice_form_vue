@@ -8,9 +8,9 @@ import datetime
 
 @frappe.whitelist()
 def get_suppliers_and_customers():
-    suppliers = frappe.get_list("Supplier", fields=["name", "supplier_name"])
+    suppliers = frappe.get_list("Supplier", filters={'is_farmer':1},fields=["name", "supplier_name"])
     customers = frappe.get_list("Customer", filters={'is_customer':1, 'is_frozen':0},fields=["name", "customer_name"])
-    items = frappe.get_list("Item", filters={'commission_item':0},fields=["name", "item_name"])
+    items = frappe.get_list("Item", filters={'commission_item':0, "is_agriculture_item": 1},fields=["name", "item_name"])
     return {
         "suppliers": suppliers,
         "customers": customers,
