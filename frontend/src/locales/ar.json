@@ -147,6 +147,16 @@
   "loading": "جاري التحميل...",
   
   "accessRestricted": "ممنوع الوصول",
-  "noPermissionToViewDrafts": "ليس لديك إذن لعرض الفواتير المسودة."
+  "noPermissionToViewDrafts": "ليس لديك إذن لعرض الفواتير المسودة.",
+  "creditLimitExceeded": "تم تجاوز حد الائتمان",
+  "understand": "أفهم",
+  "actionCancelled": "تم إلغاء الإجراء",
+  "pleaseAdjustInvoice": "يرجى تعديل مبالغ الفاتورة",
+  "creditLimitDetails": "تفاصيل حد الائتمان",
+  "creditLimitWarning": "العملاء التاليين سيتجاوزون حدودهم الائتمانية",
+  "currentBalance": "الرصيد الحالي",
+  "availableCredit": "الرصيد المتاح",
+  "excessAmount": "المبلغ الزائد",
+  "creditLimit": "حد الائتمان"
   
   }

@@ -189,6 +189,16 @@
   "loading": "Loading...",
   
   "accessRestricted": "Access Restricted",
-  "noPermissionToViewDrafts": "You do not have permission to view draft invoices."
+  "noPermissionToViewDrafts": "You do not have permission to view draft invoices.",
+  "creditLimitExceeded": "Credit Limit Exceeded",
+  "understand": "I Understand",
+  "actionCancelled": "Action Cancelled",
+  "pleaseAdjustInvoice": "Please adjust the invoice amounts",
+  "creditLimitDetails": "Credit Limit Details",
+  "creditLimitWarning": "The following customers will exceed their credit limits",
+  "currentBalance": "Current Balance",
+  "availableCredit": "Available Credit",
+  "excessAmount": "Excess Amount",
+  "creditLimit": "Credit Limit"
   
 }

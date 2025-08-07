@@ -56,6 +56,13 @@
       :can-update-submitted="canEditInvoice"
       :can-delete-invoice="canDeleteInvoice"
     />
+    <!-- Credit Limit Error Dialog -->
+<CreditLimitDialog
+  :visible="showCreditLimitDialog"
+  @update:visible="showCreditLimitDialog = $event"
+  :data="creditLimitData"
+  @close="onCreditLimitDialogClose"
+/>
   </div>
 </template>
 
@@ -63,6 +70,7 @@
 import { inject, computed } from 'vue';
 import { reactive, ref, onMounted, watch } from "vue";
 import { useRoute, onBeforeRouteLeave } from "vue-router";
+
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
@@ -72,8 +80,10 @@ import InvoiceHeader from "../components/InvoiceHeader.vue";
 import ItemsTable from "../components/ItemsTable.vue";
 import InvoiceButtons from "../components/InvoiceButtons.vue";
 import ItemDialog from "../components/ItemDialog.vue";
+import CreditLimitDialog from '../components/CreditLimitDialog.vue';
 import { useI18n } from 'vue-i18n';
-
+const showCreditLimitDialog = ref(false);
+const creditLimitData = ref({});
 const $permissions = inject('$permissions');
 
 const { t } = useI18n();
@@ -240,6 +250,17 @@ const onRowClick = (event) => {
   showItemDialog.value = true;
 };
 
+
+const onCreditLimitDialogClose = () => {
+  toast.add({
+    severity: 'info',
+    summary: t('actionCancelled') || 'Action Cancelled',
+    detail: t('pleaseAdjustInvoice') || 'Please adjust the invoice amounts',
+    life: 5000
+  });
+};
+
+
 // In InvoiceForm.vue script
 const handleDeleteItem = async (index) => {
   // Check permission
@@ -293,7 +314,8 @@ const handleDeleteItem = async (index) => {
   }
 };
 
-// Save item (add or update)
+// Complete rewrite of the saveItem function to prevent row addition on error
+
 const saveItem = async (itemFormData) => {
   // Check permission
   if (!canEditInvoice.value) return;
@@ -317,26 +339,30 @@ const saveItem = async (itemFormData) => {
 
   // Remember if this was an edit or add operation
   const wasEdit = editIndex.value !== null;
-
-  // Add or update item in the items array
+  
+  // IMPORTANT: Do NOT modify the invoice.items array yet
+  // We'll only do that after the server confirms the save was successful
+  
+  // Make a copy of the current items array that includes our changes
+  let updatedItems = [...invoice.items];
   if (wasEdit) {
-    invoice.items[editIndex.value] = itemData;
+    updatedItems[editIndex.value] = itemData;
   } else {
-    invoice.items.push(itemData);
+    updatedItems.push(itemData);
   }
-
-  // Prepare the toast message with item name
-  const hasInvoice = invoiceName.value && invoiceName.value.trim() !== '';
-
-  const toastMessage = {
-    severity: wasEdit ? "success" : "info",
-    summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
-    life: 3000,
+  
+  // Prepare data for saving
+  const invoiceDataToSave = {
+    supplier: invoice.supplier,
+    customer: invoice.customer,
+    items: updatedItems, // Use the updated items list for saving
+    posting_date: new Date().toISOString().split("T")[0],
+    invoice_id: invoiceName.value,
   };
 
-  // If this is a new invoice that hasn't been saved yet, auto-save it first
-  if (isInvoiceNew.value && !invoiceName.value) {
-    try {
+  try {
+    // For a new invoice
+    if (isInvoiceNew.value && !invoiceName.value) {
       // Make sure supplier (required field) is present
       if (!validateSupplier()) {
         toast.add({
@@ -348,63 +374,108 @@ const saveItem = async (itemFormData) => {
         return;
       }
 
-      // Auto-save the invoice with custom toast
-      await handleSaveInvoice({
+      // Save the invoice to the server
+      const response = await axios.post(
+        "/api/method/invoice_form_vue.api.create_invoice",
+        {
+          invoice_data: JSON.stringify(invoiceDataToSave),
+        }
+      );
+      
+      // Update local state ONLY after successful save
+      invoiceName.value = response.data.message.invoice_name;
+      isInvoiceNew.value = false;
+      invoice.items = updatedItems; // Now update the items array
+      
+      toast.add({
         severity: "success",
         summary: t('invoiceCreated'),
+        detail: t('invoiceCreatedWithItem', { itemName }),
         life: 3000,
       });
       
-      // Close dialog only for new items, then reset the form
+      // Reset dialog for new items
       if (!wasEdit) {
         resetDialog();
-        showItemDialog.value = true;
+        showItemDialog.value = true; // Keep dialog open for adding more items
+      } else {
+        showItemDialog.value = false;
       }
-    } catch (error) {
-      console.error("Failed to auto-save invoice:", error);
-      toast.add({
-        severity: "error",
-        summary: t('error'),
-        detail: t('failedToSaveInvoice'),
-        life: 3000,
-      });
-      return;
-    }
-  } 
-  // If this is an existing invoice, update it
-  else if (!isInvoiceNew.value && invoiceName.value) {
-    try {
-      await handleSaveInvoice(toastMessage);
+    } 
+    // For an existing invoice
+    else if (!isInvoiceNew.value && invoiceName.value) {
+      // Save the invoice to the server
+      const response = await axios.post(
+        "/api/method/invoice_form_vue.api.create_invoice",
+        {
+          invoice_data: JSON.stringify(invoiceDataToSave),
+        }
+      );
       
-      // Close dialog only for new items, then reset the form
-      if (!wasEdit) {
-        resetDialog();
-        showItemDialog.value = true;
-      }
-    } catch (error) {
-      console.error("Failed to update invoice:", error);
+      // Update local state ONLY after successful save
+      invoice.items = updatedItems; // Now update the items array
+      
       toast.add({
-        severity: "error",
-        summary: t('error'),
-        detail: t('failedToUpdateInvoice'),
+        severity: "success",
+        summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
+        detail: wasEdit 
+          ? t('itemUpdateSuccess', { itemName, invoiceName: invoiceName.value })
+          : t('itemAddSuccess', { itemName, invoiceName: invoiceName.value }),
         life: 3000,
       });
-      return;
+      
+      // Reset dialog for new items
+      if (!wasEdit) {
+        resetDialog();
+        showItemDialog.value = true; // Keep dialog open for adding more items
+      } else {
+        showItemDialog.value = false;
+      }
     }
-  }
-  // If we're not auto-saving (just working with a new unsaved invoice)
-  else {
-    toast.add(toastMessage);
-    
-    // Close dialog only for new items, then reset the form
-    if (!wasEdit) {
-      resetDialog();
-      showItemDialog.value = false;
+    // For a new unsaved invoice (just working locally)
+    else {
+      // Update the local items array directly
+      invoice.items = updatedItems;
+      
+      toast.add({
+        severity: wasEdit ? "success" : "info",
+        summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
+        detail: wasEdit 
+          ? t('itemUpdateSuccessNoInvoice', { itemName })
+          : t('itemAddSuccessNoInvoice', { itemName }),
+        life: 3000,
+      });
+      
+      // Reset dialog for new items
+      if (!wasEdit) {
+        resetDialog();
+        showItemDialog.value = false;
+      } else {
+        showItemDialog.value = false;
+      }
     }
-  }
 
-  // Set dirty flag
-  isDirty.value = false;
+    // Set dirty flag
+    isDirty.value = false;
+  } catch (error) {
+    console.error("Failed to save item:", error);
+    
+    // Do NOT update the invoice.items array here
+    // The original state is maintained because we never modified it on error
+    
+    // Check if this is a credit limit error
+    if (!handleCreditLimitError(error, confirm, toast)) {
+      // If not a credit limit error, show generic error
+      toast.add({
+        severity: "error",
+        summary: t('error'),
+        detail: wasEdit ? t('failedToUpdateInvoice') : t('failedToSaveInvoice'),
+        life: 3000,
+      });
+    }
+    
+    // Do not close the dialog on error, let the user try again
+  }
 };
 
 // Reset form + edit index
@@ -438,41 +509,184 @@ const handleSaveInvoice = async (customToast = null) => {
   if (!canEditInvoice.value) return;
   
   if (!validateSupplier()) return;
+  
+  // Add credit limit pre-validation
+  const creditLimitsOk = await validateCustomerCreditLimits();
+  if (!creditLimitsOk) return;
+  
+  // No need to store original state as we're not modifying it until after successful save
+  
   try {
     const invoiceData = {
       supplier: invoice.supplier,
       customer: invoice.customer,
       items: invoice.items,
-      posting_date: new Date().toISOString().split("T")[0], // Get current date in YYYY-MM-DD format
-      invoice_id: invoiceName.value, // Pass invoice ID for update, otherwise null for new
+      posting_date: new Date().toISOString().split("T")[0],
+      invoice_id: invoiceName.value,
     };
 
-    const response = await saveInvoice(invoiceData); // Pass the invoice data to saveInvoice method
-    invoiceName.value = response.message.invoice_name; // Show the invoice name after save/update
+    // Call the API
+    const response = await axios.post(
+      "/api/method/invoice_form_vue.api.create_invoice",
+      {
+        invoice_data: JSON.stringify(invoiceData),
+      }
+    );
     
-    // Only show toast if customToast is not provided
+    // Only update state after successful save
+    invoiceName.value = response.data.message.invoice_name;
+    isInvoiceNew.value = false;
+    isDirty.value = false;
+    
+    // Show success toast
     if (!customToast) {
       toast.add({
         summary: isInvoiceNew.value ? t('invoiceCreated') : t('invoiceUpdated'),
         life: 2000,
       });
     } else {
-      // Use the custom toast if provided
       toast.add(customToast);
     }
-
-    isInvoiceNew.value = false; // Mark as existing invoice
-    isDirty.value = false;
   } catch (error) {
-    // Show error in toast if API returns an error message
-    toast.add({ severity: "error", summary: "Error", detail: error.message });
+    console.error("Failed to save invoice:", error);
+    
+    // No need to restore state as we never modified it
+    
+    // Handle credit limit errors
+    if (!handleCreditLimitError(error, confirm, toast)) {
+      toast.add({ 
+        severity: "error", 
+        summary: t('error'), 
+        detail: error.message || t('unknownError'),
+        life: 3000 
+      });
+    }
   }
+};
+
+const validateCustomerCreditLimits = async () => {
+  try {
+    // Extract unique customers from invoice items
+    const customers = [...new Set(invoice.items
+      .map(item => typeof item.customer === 'object' ? item.customer.code : item.customer)
+      .filter(Boolean)
+    )];
+    
+    if (customers.length === 0) return true;
+    
+    // Prepare item data for credit check
+    const itemsData = invoice.items.map(item => ({
+      customer: typeof item.customer === 'object' ? item.customer.code : item.customer,
+      total: item.amount || (item.qty * item.rate)
+    }));
+    
+    // Call API to check credit limits
+    const response = await axios.post(
+      "/api/method/agricultural_marketing.agricultural_marketing.doctype.invoice_form.invoice_form.validate_invoice_multiple_customers",
+      {
+        doc_json: JSON.stringify({
+          company: "Your Company", // Replace with actual company field from your data
+          items: itemsData,
+          name: invoiceName.value || null
+        })
+      }
+    );
+    
+    // If validation fails, show credit limit warning dialog
+    if (response.data.message && !response.data.message.valid) {
+      const violations = response.data.message.violations || [];
+      
+      if (violations.length > 0) {
+        // Create a nicely formatted message showing all credit limit issues
+        let message = `<div style="font-family: Arial, sans-serif;">
+          <h4 style="color: #d73527; margin-bottom: 15px;">${t('creditLimitWarning')}</h4>`;
+        
+        violations.forEach((violation, index) => {
+          message += `
+            <div style="margin-bottom: 10px; border: 1px solid #ffcdd2; padding: 10px; background-color: #fff5f5;">
+              <h5 style="color: #d73527; margin: 0 0 10px 0;">${index + 1}. ${violation.customer_name}</h5>
+              <div><strong>${t('creditLimit')}:</strong> ${formatCurrency(violation.credit_limit)}</div>
+              <div><strong>${t('excessAmount')}:</strong> ${formatCurrency(violation.excess_amount)}</div>
+            </div>
+          `;
+        });
+        
+        message += `<p>${t('creditLimitExceededQuestion')}</p></div>`;
+        
+        // Show confirmation dialog
+        return new Promise(resolve => {
+          confirm.require({
+            message: message,
+            header: t('creditLimitExceeded'),
+            icon: 'pi pi-exclamation-triangle',
+            acceptClass: 'p-button-danger',
+            acceptLabel: t('proceedAnyway'),
+            rejectLabel: t('cancel'),
+            accept: () => {
+              // User wants to proceed despite credit limit warnings
+              toast.add({
+                severity: 'warn',
+                summary: t('proceedingWithWarnings'),
+                life: 3000
+              });
+              resolve(true);
+            },
+            reject: () => {
+              // User chooses to adjust the invoice
+              toast.add({
+                severity: 'info',
+                summary: t('actionCancelled'),
+                detail: t('pleaseAdjustInvoice'),
+                life: 3000
+              });
+              resolve(false);
+            }
+          });
+        });
+      }
+    }
+    
+    // No violations found
+    return true;
+  } catch (error) {
+    console.error('Error checking credit limits:', error);
+    // If the validation check itself fails, proceed with save
+    // The server will still perform the final validation
+    return true;
+  }
+};
+const formatCurrency = (value) => {
+  if (value == null) return '0.00';
+  
+  // If value is already a string (like "31,000.00"), return it as is
+  if (typeof value === 'string') {
+    // Check if it's a properly formatted currency string
+    if (/^[\d,]+\.\d{2}$/.test(value) || /^[\d\.]+$/.test(value)) {
+      return value;
+    }
+    
+    // Try to convert it to a number first
+    const parsedValue = parseFloat(value.replace(/,/g, ''));
+    if (isNaN(parsedValue)) {
+      return value; // Return original string if we can't parse it
+    }
+    value = parsedValue;
+  }
+  
+  // Format the number
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 };
 
 const saveInvoice = async (invoiceData) => {
   try {
     if (!validateSupplier()) return;
-    // Send invoice data to the backend to create or update
+    
+    // No need to store original state as we're not modifying it until after success
+    
+    // Send invoice data to the backend
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.create_invoice",
       {
@@ -483,14 +697,10 @@ const saveInvoice = async (invoiceData) => {
     // Return response with invoice name and supplier info for display
     return response.data;
   } catch (error) {
-    toast.add({
-      severity: "error",
-      summary: "Error",
-      life: 2000,
-    });
-    throw new Error(
-      error.response?.data?.message || "An unknown error occurred"
-    );
+    console.error("API error:", error);
+    
+    // Rethrow the error for the calling function to handle
+    throw error;
   }
 };
 
@@ -657,6 +867,192 @@ onBeforeRouteLeave((to, from, next) => {
     next(); // No changes, safe to leave
   }
 });
+
+
+
+// Improved handleCreditLimitError function with better debugging and fallback values
+
+const handleCreditLimitError = (error, confirmInstance, toast) => {
+  // Check if we have a response with data
+  if (!error.response?.data) return false;
+  
+  const errorData = error.response.data;
+  let errorMessage = '';
+  
+  // Extract error message from various possible formats
+  if (errorData._server_messages) {
+    try {
+      const messages = JSON.parse(errorData._server_messages);
+      errorMessage = messages[0] || '';
+    } catch (e) {
+      errorMessage = errorData._server_messages;
+    }
+  } else if (errorData.message) {
+    errorMessage = errorData.message;
+  } else if (errorData._error_message) {
+    errorMessage = errorData._error_message;
+  }
+  
+  console.log('Credit limit error raw message:', errorMessage);
+  
+  // Check if this is a credit limit error
+  const isCreditLimitError = typeof errorMessage === 'string' && (
+    errorMessage.includes('Credit Limit Exceeded') || 
+    errorMessage.includes('Multiple Credit Limits Exceeded') ||
+    errorMessage.includes('credit limit') ||
+    errorMessage.includes('Excess Amount') ||
+    errorMessage.includes('Total Exposure')
+  );
+  
+  if (isCreditLimitError) {
+    try {
+      // Extract customer data directly from invoice
+      const customerName = typeof invoice.customer === 'object' 
+        ? invoice.customer.label 
+        : invoice.customer;
+      
+      // Calculate total invoice amount
+      const invoiceAmount = invoice.items.reduce((sum, item) => {
+        return sum + (item.amount || (item.qty * item.rate));
+      }, 0);
+      
+      // Get values directly from the error message using more flexible regex
+      const extractValue = (pattern) => {
+        const match = errorMessage.match(pattern);
+        return match ? match[1].trim() : null;
+      };
+      
+      // Try different patterns to match the data
+      const creditLimit = 
+        extractValue(/Credit Limit:<\/strong><\/td>\s*<td[^>]*>([^<]+)<\/td>/) ||
+        extractValue(/Credit Limit:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const currentBalance = 
+        extractValue(/Current Balance[^:]*:<\/strong><\/td>\s*<td[^>]*>([^<]+)<\/td>/) ||
+        extractValue(/Current Balance[^:]*:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const draftInvoices = 
+        extractValue(/Draft Invoices:<\/strong><\/td>\s*<td[^>]*>([^<]+)<\/td>/) ||
+        extractValue(/Draft Invoices:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const draftPayments = 
+        extractValue(/Draft Payments\/Receipts:<\/strong><\/td>\s*<td[^>]*>([^<]+)<\/td>/) ||
+        extractValue(/Draft Payments\/Receipts:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const totalBalance = 
+        extractValue(/Total Current Balance:<\/strong><\/td>\s*<td[^>]*><strong>([^<]+)<\/strong><\/td>/) ||
+        extractValue(/Total Current Balance:.*?<strong>([^<]+)<\/strong>/) ||
+        extractValue(/Total Current Balance:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const totalExposure = 
+        extractValue(/Total Exposure:<\/strong><\/td>\s*<td[^>]*><strong>([^<]+)<\/strong><\/td>/) ||
+        extractValue(/Total Exposure:.*?<strong>([^<]+)<\/strong>/) ||
+        extractValue(/Total Exposure:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+        
+      const excessAmount = 
+        extractValue(/Excess Amount:<\/strong><\/td>\s*<td[^>]*><strong>([^<]+)<\/strong><\/td>/) ||
+        extractValue(/Excess Amount:.*?<strong>([^<]+)<\/strong>/) ||
+        extractValue(/Excess Amount:.*?(\d[\d,\.]+)/) ||
+        "0.00";
+      
+      console.log('Extracted credit limit data:', {
+        customer: customerName,
+        creditLimit,
+        currentBalance,
+        draftInvoices,
+        draftPayments,
+        totalBalance,
+        invoiceAmount: formatCurrency(invoiceAmount),
+        totalExposure,
+        excessAmount
+      });
+      
+      // Update the data for our custom dialog with better fallbacks
+      creditLimitData.value = {
+        customer: customerName || 'Unknown Customer',
+        company: invoice.supplier?.label || '',
+        creditLimit: creditLimit,
+        currentBalance: currentBalance,
+        draftInvoices: draftInvoices,
+        draftPayments: draftPayments,
+        totalBalance: totalBalance,
+        invoiceAmount: formatCurrency(invoiceAmount),
+        totalExposure: totalExposure,
+        excessAmount: excessAmount
+      };
+      
+      // Show our custom dialog
+      showCreditLimitDialog.value = true;
+      
+      return true;
+    } catch (e) {
+      console.error('Error parsing credit limit message:', e);
+      
+      // Calculate total invoice amount for fallback message
+      const invoiceAmount = invoice.items.reduce((sum, item) => {
+        return sum + (item.amount || (item.qty * item.rate));
+      }, 0);
+      
+      // Fallback to showing calculated values
+      creditLimitData.value = {
+        customer: typeof invoice.customer === 'object' ? invoice.customer.label : invoice.customer,
+        company: invoice.supplier?.label || '',
+        creditLimit: "Unknown",
+        currentBalance: "Unknown",
+        draftInvoices: "0.00",
+        draftPayments: "0.00",
+        totalBalance: "Unknown",
+        invoiceAmount: formatCurrency(invoiceAmount),
+        totalExposure: "Unknown",
+        excessAmount: "Unknown"
+      };
+      
+      showCreditLimitDialog.value = true;
+      return true;
+    }
+  }
+  
+  // Not a credit limit error
+  return false;
+};
+
+
+const extractHtmlFromError = (errorMessage) => {
+  // Try to parse as JSON if it's a JSON string
+  let processedMessage = errorMessage;
+  
+  try {
+    if (typeof errorMessage === 'string' && errorMessage.startsWith('[') && errorMessage.endsWith(']')) {
+      const parsed = JSON.parse(errorMessage);
+      processedMessage = parsed[0] || errorMessage;
+    }
+  } catch (e) {
+    // Not JSON, continue with original message
+  }
+  
+  // Look for HTML content in the message
+  if (typeof processedMessage === 'string') {
+    // Check for div with specific styling that indicates credit limit error
+    if (processedMessage.includes('<div style="font-family: Arial, sans-serif;">')) {
+      return processedMessage;
+    }
+    
+    // Fallback regex to extract any HTML content
+    const htmlMatch = processedMessage.match(/<div[^>]*>([\s\S]*?)<\/div>/i);
+    if (htmlMatch && htmlMatch[0]) {
+      return htmlMatch[0];
+    }
+  }
+  
+  return null;
+};
+
 
 // Load data when component is mounted
 onMounted(async () => {
