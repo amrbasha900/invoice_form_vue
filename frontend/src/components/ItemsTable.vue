@@ -1,23 +1,42 @@
-<!-- components/ItemsTable.vue -->
+<!-- components/ItemsTable.vue - Enhanced with row delete icons -->
 <template>
   <div>
     <DataTable :value="items" class="w-full mt-4 compact-table" responsiveLayout="scroll" @row-click="onRowClick"
       :rowHover="canUpdateDraft" :rowClass="rowClass" :scrollable="true" scrollHeight="400px">
+      
       <Column field="item" :header="$t('item')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ slotProps.data.item?.label || slotProps.data.item }}
         </template>
       </Column>
+      
       <Column field="qty" :header="$t('qty')" headerClass="text-center" bodyClass="text-center" />
+      
       <Column field="rate" :header="$t('rate')" headerClass="text-center" bodyClass="text-center" />
+      
       <Column :header="$t('amount')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ formatAmount(slotProps.data.amount) }}
         </template>
       </Column>
+      
       <Column :header="$t('customer')" headerClass="text-center" bodyClass="text-center">
         <template #body="slotProps">
           {{ slotProps.data.customer?.label || slotProps.data.customer }}
+        </template>
+      </Column>
+
+      <!-- New Delete Action Column -->
+      <Column v-if="showDeleteColumn" :header="$t('actions')" headerClass="text-center" bodyClass="text-center" style="width: 60px">
+        <template #body="slotProps">
+          <Button 
+            icon="pi pi-trash" 
+            class="p-button-rounded p-button-text p-button-danger p-button-sm"
+            @click="onDeleteRow($event, slotProps.index)"
+            type="button"
+            :aria-label="$t('delete')"
+            v-tooltip.top="$t('delete')"
+          />
         </template>
       </Column>
     </DataTable>
@@ -29,7 +48,6 @@
       </div>
       
       <!-- Left: Add Item Button -->
-      
       <div class="text-right">
         <Button
           v-if="isDraft && canUpdateDraft"
@@ -39,8 +57,6 @@
           @click="$emit('add-item')"
         />
       </div>
-
-      
     </div>
   </div>
 </template>
@@ -51,6 +67,13 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import { computed } from 'vue';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
+const confirm = useConfirm();
+const toast = useToast();
 
 // Define props
 const props = defineProps({
@@ -65,11 +88,20 @@ const props = defineProps({
   canUpdateDraft: {
     type: Boolean,
     default: true
+  },
+  canDeleteInvoice: {
+    type: Boolean,
+    default: false
   }
 });
 
 // Define emits
-const emit = defineEmits(['row-click', 'add-item']);
+const emit = defineEmits(['row-click', 'add-item', 'delete-item']);
+
+// Computed property to show delete column only if user has delete permission
+const showDeleteColumn = computed(() => {
+  return props.canDeleteInvoice && props.isDraft && props.canUpdateDraft;
+});
 
 // Format currency for display
 const formatCurrency = (value) => {
@@ -82,12 +114,40 @@ const formatCurrency = (value) => {
   }).format(value);
 };
 
-// Handle row click
+// Handle row click (but prevent if clicking on delete button)
 const onRowClick = (event) => {
   // Only emit row click event if the user has permission to update
-  if (props.canUpdateDraft) {
+  // and if they didn't click on the delete button
+  if (props.canUpdateDraft && !event.originalEvent.target.closest('.p-button')) {
     emit('row-click', event);
   }
+};
+
+// Handle delete row click
+const onDeleteRow = (event, rowIndex) => {
+  // Prevent row click event when delete button is clicked
+  event.stopPropagation();
+  
+  // Show confirmation dialog
+  confirm.require({
+    message: t('confirmDeleteItem'),
+    header: t('confirmDelete'),
+    icon: "pi pi-exclamation-triangle",
+    acceptClass: "p-button-danger",
+    acceptLabel: t('yesDelete'),
+    rejectLabel: t('cancel'),
+    accept: () => {
+      // Emit delete event with row index
+      emit('delete-item', rowIndex);
+    },
+    reject: () => {
+      toast.add({
+        severity: "info",
+        summary: t('cancelled'),
+        life: 2000,
+      });
+    },
+  });
 };
 
 // Set row class based on whether the row is clickable
@@ -166,5 +226,24 @@ const formatAmount = (value) => {
 :deep(.p-button-sm) {
   font-size: 0.75rem !important;
   padding: 0.3rem 0.7rem !important;
+}
+
+/* Delete button styles */
+:deep(.p-button-rounded.p-button-text.p-button-danger) {
+  width: 2rem !important;
+  height: 2rem !important;
+  padding: 0 !important;
+  font-size: 0.75rem !important;
+}
+
+/* Hover effect for delete button */
+:deep(.p-button-rounded.p-button-text.p-button-danger:hover) {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+}
+
+/* Actions column specific styling */
+:deep(.compact-table .p-datatable-tbody > tr > td:last-child) {
+  padding: 0.1rem !important;
 }
 </style>

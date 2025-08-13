@@ -17,12 +17,14 @@
 
       <!-- Items Table -->
       <ItemsTable
-        :items="invoice.items"
-        :is-draft="isDraft"
-        :can-update-draft="canEditInvoice"
-        @row-click="onRowClick"
-        @add-item="openAddDialog"
-      />
+  :items="invoice.items"
+  :is-draft="isDraft"
+  :can-update-draft="canEditInvoice"
+  :can-delete-invoice="canDeleteInvoice"
+  @row-click="onRowClick"
+  @add-item="openAddDialog"
+  @delete-item="handleDeleteItemFromTable"
+/>
 
       <!-- Action Buttons -->
       <InvoiceButtons
@@ -735,6 +737,61 @@ const deleteInvoice = async () => {
       severity: 'error',
       summary: t('error'),
       detail: t('deleteInvoiceFailed'),
+    });
+  }
+};
+
+// Add this new function
+const handleDeleteItemFromTable = async (index) => {
+  // Check permission
+  if (!canDeleteInvoice.value) return;
+  
+  if (index !== null && index >= 0 && index < invoice.items.length) {
+    // Remove the item from the local array
+    const itemToRemove = invoice.items[index];
+    invoice.items.splice(index, 1);
+    const itemName = itemToRemove.item?.label || itemToRemove.item;
+    
+    // Update the invoice in the database if it has already been saved
+    if (invoiceName.value) {
+      try {
+        // Call the saveInvoice function with a custom toast message
+        await handleSaveInvoice({
+          severity: "success",
+          summary: t('itemDeleted'),
+          detail: t('itemDeletedFromInvoice', { itemName, invoiceName: invoiceName.value }),
+          life: 2000,
+        });
+      } catch (error) {
+        console.error("Failed to update invoice after deletion:", error);
+        toast.add({
+          severity: "error",
+          summary: t('error'),
+          detail: t('failedToUpdateAfterDeletion'),
+          life: 3000,
+        });
+        
+        // Rollback: re-add the item if save failed
+        invoice.items.splice(index, 0, itemToRemove);
+      }
+    } else {
+      // Just show a success message if this is a new unsaved invoice
+      toast.add({
+        severity: "success",
+        summary: t('deleted'),
+        detail: t('itemRemoved', { itemName }),
+        life: 2000,
+      });
+    }
+    
+    isDirty.value = false;
+  } else {
+    console.error("Invalid index for deletion:", index);
+    toast.add({
+      severity: "error",
+      summary: t('error'),
+      detail: t('failedToDeleteItem'),
+      life: 2000,
     });
   }
 };
