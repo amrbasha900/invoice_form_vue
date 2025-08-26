@@ -20,6 +20,7 @@
       
       <!-- Credit Limit Table -->
       <table class="credit-table">
+        <tbody>
         <tr>
           <td class="label">Credit Limit:</td>
           <td class="value">{{ creditLimit }}</td>
@@ -52,6 +53,7 @@
           <td class="label"><strong>Excess Amount:</strong></td>
           <td class="value"><strong>{{ excessAmount }}</strong></td>
         </tr>
+        </tbody>
       </table>
       
       <!-- Message -->
@@ -146,11 +148,11 @@ const close = () => {
   margin-bottom: 1.5rem;
 }
 
-.credit-table tr {
+.credit-table tbody tr {
   border-bottom: 1px solid #e2e8f0;
 }
 
-.credit-table tr:last-child {
+.credit-table tbody tr:last-child {
   border-bottom: none;
 }
 

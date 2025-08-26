@@ -25,7 +25,12 @@
           {{ slotProps.data.customer?.label || slotProps.data.customer }}
         </template>
       </Column>
-
+<!-- Add this column after the customer column -->
+<Column v-if="showItemRemark" :header="$t('remark')" headerClass="text-center" bodyClass="text-center">
+  <template #body="slotProps">
+    {{ slotProps.data.remark || '' }}
+  </template>
+</Column>
       <!-- New Delete Action Column -->
       <Column v-if="showDeleteColumn" :header="$t('actions')" headerClass="text-center" bodyClass="text-center" style="width: 60px">
         <template #body="slotProps">
@@ -66,7 +71,7 @@
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useI18n } from 'vue-i18n';
@@ -94,6 +99,7 @@ const props = defineProps({
     default: false
   }
 });
+const $permissions = inject('$permissions');
 
 // Define emits
 const emit = defineEmits(['row-click', 'add-item', 'delete-item']);
@@ -122,7 +128,9 @@ const onRowClick = (event) => {
     emit('row-click', event);
   }
 };
-
+const showItemRemark = computed(() => {
+  return $permissions?.hasPermission('show_item_remark') || false;
+});
 // Handle delete row click
 const onDeleteRow = (event, rowIndex) => {
   // Prevent row click event when delete button is clicked

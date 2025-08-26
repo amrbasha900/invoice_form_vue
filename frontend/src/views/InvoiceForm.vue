@@ -14,7 +14,18 @@
         @clear-customer="onClearCustomer"
         :disabled="isEditingDisabled"
       />
-
+<div v-if="showInvoiceRemark" class="mt-4">
+  <FloatLabel variant="on" class="w-full">
+    <Textarea
+      v-model="invoice.invoice_remark"
+      inputId="invoice_remark"
+      rows="3"
+      class="w-full"
+      :disabled="isEditingDisabled"
+    />
+    <label for="invoice_remark">{{ $t('invoiceRemark') || 'Invoice Remark' }}</label>
+  </FloatLabel>
+</div>
       <!-- Items Table -->
       <ItemsTable
   :items="invoice.items"
@@ -103,6 +114,7 @@ const invoiceLocked = ref(false); // Add this to track lock_update status
 const invoice = reactive({
   supplier: "",
   customer: "",
+  invoice_remark: "",
   items: [],
 });
 
@@ -115,6 +127,7 @@ const newItem = reactive({
   rateEditing: false,
   amount: null,
   customer: "",
+  remark: "",
 });
 const isDirty = ref(false);
 
@@ -148,7 +161,13 @@ const canSubmitInvoice = computed(() => {
 const isEditingDisabled = computed(() => {
   return !canEditInvoice.value;
 });
+const showInvoiceRemark = computed(() => {
+  return $permissions?.hasPermission('show_invoice_remark') || false;
+});
 
+const showItemRemark = computed(() => {
+  return $permissions?.hasPermission('show_item_remark') || false;
+});
 // NEW FUNCTION: Handle row navigation from dialog
 const handleRowNavigation = (newIndex) => {
   console.log('Navigation requested to row:', newIndex);
@@ -172,6 +191,7 @@ const handleRowNavigation = (newIndex) => {
     rate: rowData.rate,
     customer: rowData.customer,
     amount: rowData.amount,
+    remark: rowData.remark || "", // ADD THIS
     qtyEditing: true,  // Set to true so existing values display properly
     rateEditing: true  // Set to true so existing values display properly
   });
@@ -245,6 +265,7 @@ const onRowClick = (event) => {
     qty: row.qty,
     rate: row.rate,
     customer: row.customer,
+    remark: row.remark || "",
     amount: row.amount,
     qtyEditing: true,  // Set to true so existing values display properly
     rateEditing: true  // Set to true so existing values display properly
@@ -334,6 +355,7 @@ const saveItem = async (itemFormData) => {
     rate: newItem.rate,
     amount: newItem.qty * newItem.rate,
     customer: newItem.customer,
+    remark: newItem.remark
   };
 
   // Get the item name for toast messages
@@ -357,6 +379,7 @@ const saveItem = async (itemFormData) => {
   const invoiceDataToSave = {
     supplier: invoice.supplier,
     customer: invoice.customer,
+    invoice_remark: invoice.invoice_remark,
     items: updatedItems, // Use the updated items list for saving
     posting_date: new Date().toISOString().split("T")[0],
     invoice_id: invoiceName.value,
@@ -390,18 +413,18 @@ const saveItem = async (itemFormData) => {
       invoice.items = updatedItems; // Now update the items array
       
       toast.add({
-        severity: "success",
-        summary: t('invoiceCreated'),
-        detail: t('invoiceCreatedWithItem', { itemName }),
-        life: 3000,
-      });
+  severity: "success",
+  summary: "Invoice Created",
+  detail: `Invoice created with item "${itemName}"`,
+  life: 3000,
+});
       
       // Reset dialog for new items
       if (!wasEdit) {
         resetDialog();
         showItemDialog.value = true; // Keep dialog open for adding more items
       } else {
-        showItemDialog.value = false;
+        showItemDialog.value = true;
       }
     } 
     // For an existing invoice
@@ -421,8 +444,8 @@ const saveItem = async (itemFormData) => {
         severity: "success",
         summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
         detail: wasEdit 
-          ? t('itemUpdateSuccess', { itemName, invoiceName: invoiceName.value })
-          : t('itemAddSuccess', { itemName, invoiceName: invoiceName.value }),
+          ? `Item "${itemName}" updated in invoice ${invoiceName.value}`
+          : `Item "${itemName}" added to invoice ${invoiceName.value}`,
         life: 3000,
       });
       
@@ -431,7 +454,7 @@ const saveItem = async (itemFormData) => {
         resetDialog();
         showItemDialog.value = true; // Keep dialog open for adding more items
       } else {
-        showItemDialog.value = false;
+        showItemDialog.value = true;
       }
     }
     // For a new unsaved invoice (just working locally)
@@ -440,20 +463,20 @@ const saveItem = async (itemFormData) => {
       invoice.items = updatedItems;
       
       toast.add({
-        severity: wasEdit ? "success" : "info",
-        summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
-        detail: wasEdit 
-          ? t('itemUpdateSuccessNoInvoice', { itemName })
-          : t('itemAddSuccessNoInvoice', { itemName }),
-        life: 3000,
-      });
+  severity: wasEdit ? "success" : "info",
+  summary: wasEdit ? "Item Updated" : "Item Added",
+  detail: wasEdit 
+    ? `Item "${itemName}" updated`
+    : `Item "${itemName}" added`,
+  life: 3000,
+});
       
       // Reset dialog for new items
       if (!wasEdit) {
         resetDialog();
-        showItemDialog.value = false;
+        showItemDialog.value = true;
       } else {
-        showItemDialog.value = false;
+        showItemDialog.value = true;
       }
     }
 
@@ -469,11 +492,11 @@ const saveItem = async (itemFormData) => {
     if (!handleCreditLimitError(error, confirm, toast)) {
       // If not a credit limit error, show generic error
       toast.add({
-        severity: "error",
-        summary: t('error'),
-        detail: wasEdit ? t('failedToUpdateInvoice') : t('failedToSaveInvoice'),
-        life: 3000,
-      });
+  severity: "error",
+  summary: "Error",
+  detail: wasEdit ? "Failed to update invoice" : "Failed to save invoice",
+  life: 3000,
+});
     }
     
     // Do not close the dialog on error, let the user try again
@@ -488,6 +511,7 @@ const resetDialog = () => {
   newItem.rate = "";
   newItem.rateEditing = false;
   newItem.amount = null;
+  newItem.remark = "";
   if (!invoice.customer) {
     newItem.customer = "";
   } else {
@@ -500,6 +524,7 @@ const resetDialog = () => {
 const resetInvoiceForm = () => {
   invoice.supplier = "";
   invoice.customer = "";
+  invoice.invoice_remark = "";
   invoice.items = [];
   invoiceName.value = null;
   isInvoiceNew.value = true;
@@ -516,31 +541,80 @@ const handleSaveInvoice = async (customToast = null) => {
   const creditLimitsOk = await validateCustomerCreditLimits();
   if (!creditLimitsOk) return;
   
-  // No need to store original state as we're not modifying it until after successful save
-  
   try {
     const invoiceData = {
       supplier: invoice.supplier,
       customer: invoice.customer,
+      invoice_remark: invoice.invoice_remark,
       items: invoice.items,
       posting_date: new Date().toISOString().split("T")[0],
       invoice_id: invoiceName.value,
     };
 
-    // Call the API
-    const response = await axios.post(
-      "/api/method/invoice_form_vue.api.create_invoice",
-      {
-        invoice_data: JSON.stringify(invoiceData),
-      }
-    );
+    console.log("📝 Invoice remark being sent:", invoiceData.invoice_remark);
     
-    // Only update state after successful save
-    invoiceName.value = response.data.message.invoice_name;
+    let response;
+    try {
+      response = await axios.post(
+        "/api/method/invoice_form_vue.api.create_invoice",
+        {
+          invoice_data: JSON.stringify(invoiceData),
+        }
+      );
+      
+      console.log("📤 API Response received successfully");
+      
+    } catch (axiosError) {
+      console.log("⚠️ Axios error in handleSaveInvoice:", axiosError);
+      
+      // Check if it's a parsing error on successful update (status 200)
+      if (axiosError.response && axiosError.response.status === 200) {
+        console.log("✅ Status 200 but parsing failed - assuming success and verifying...");
+        
+        // If we have an invoice name, verify by reloading
+        if (invoiceName.value) {
+          try {
+            await loadInvoice(invoiceName.value);
+            
+            isDirty.value = false;
+            
+            if (!customToast) {
+              toast.add({
+                summary: t('invoiceUpdated'),
+                life: 2000,
+              });
+            } else {
+              toast.add(customToast);
+            }
+            return; // Exit successfully
+            
+          } catch (reloadError) {
+            console.error("❌ Reload verification failed:", reloadError);
+          }
+        } else {
+          // For new invoices, we can't verify easily, so just assume success
+          isInvoiceNew.value = false;
+          isDirty.value = false;
+          
+          toast.add({
+            summary: t('invoiceCreated'),
+            life: 2000,
+          });
+          return;
+        }
+      }
+      
+      // If not a parsing error, re-throw
+      throw axiosError;
+    }
+    
+    // Normal successful response handling
+    if (response && response.data && response.data.message) {
+      invoiceName.value = response.data.message.invoice_name;
+    }
     isInvoiceNew.value = false;
     isDirty.value = false;
     
-    // Show success toast
     if (!customToast) {
       toast.add({
         summary: isInvoiceNew.value ? t('invoiceCreated') : t('invoiceUpdated'),
@@ -549,12 +623,10 @@ const handleSaveInvoice = async (customToast = null) => {
     } else {
       toast.add(customToast);
     }
+    
   } catch (error) {
-    console.error("Failed to save invoice:", error);
+    console.error("❌ Failed to save invoice:", error);
     
-    // No need to restore state as we never modified it
-    
-    // Handle credit limit errors
     if (!handleCreditLimitError(error, confirm, toast)) {
       toast.add({ 
         severity: "error", 
@@ -562,6 +634,23 @@ const handleSaveInvoice = async (customToast = null) => {
         detail: error.message || t('unknownError'),
         life: 3000 
       });
+    }
+  }
+};
+
+// Optional: Add a utility function to help with debugging
+const debugApiResponse = (response, operation) => {
+  console.log(`🔍 Debugging ${operation}:`);
+  console.log("Response object:", response);
+  console.log("Response data:", response?.data);
+  console.log("Response status:", response?.status);
+  console.log("Response headers:", response?.headers);
+  
+  if (response?.data) {
+    try {
+      console.log("Response data as string:", JSON.stringify(response.data));
+    } catch (e) {
+      console.log("Cannot stringify response data:", e);
     }
   }
 };
@@ -844,12 +933,14 @@ const loadInvoice = async (invoiceNameParam) => {
       label: invoiceData.customer_name,
       code: invoiceData.customer,
     };
-
+    invoice.invoice_remark = invoiceData.invoice_remark
     invoice.items = (invoiceData.items || []).map((item) => ({
       item: item.item_code,
       qty: item.qty,
       rate: item.price,
       amount: item.total,
+        remark: item.remark || "", // ADD THIS
+
       customer: {
         label: item.customer_name || item.customer,
         code: item.customer,

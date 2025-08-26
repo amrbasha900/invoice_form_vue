@@ -22,6 +22,7 @@ def create_invoice(invoice_data):
     try:
         data = json.loads(invoice_data)
         frappe.logger().info(f"📥 Incoming invoice data: {data}")
+        frappe.log_error(message=f"📥 Incoming invoice data: {str(data)}", title= 'l')
 
         if not data.get("supplier"):
             frappe.throw(_("Supplier and Customer are required"))
@@ -32,16 +33,23 @@ def create_invoice(invoice_data):
             if not data.get("invoice_id")
             else frappe.get_doc("Invoice Form", data["invoice_id"])
         )
+        
         pamper = None
         if not data.get("invoice_id"):
-            #pamper = frappe.db.get_value("Customer", {'pamper_user': frappe.session.user}, "name")
             pamper_name = frappe.db.sql("select pamper from `tabInvoice Form Permission Details` where user = '"+frappe.session.user+"' ", as_dict=1)
             if pamper_name:
                 doc.pamper = pamper_name[0].pamper 
             else:
                 frappe.log_error(title="Invoice Form Creation error", message="No Papmer Found in Papmer For User In Invoice Form Permission Details")
+        
         doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
         doc.posting_date = data.get("posting_date")
+        invoice_remark = data.get("invoice_remark")
+        frappe.logger().info(f"📝 Setting invoice_remark to: '{invoice_remark}'")
+        
+        # Add invoice remark if provided
+        if data.get("invoice_remark"):
+            doc.invoice_remark = data["invoice_remark"]
 
         if "supplier" in data:
             doc.supplier = data["supplier"]["code"] if isinstance(data["supplier"], dict) else data["supplier"]
@@ -50,18 +58,23 @@ def create_invoice(invoice_data):
         doc.items = []
 
         for item in data.get("items", []):
-            doc.append("items", {
+            item_doc = {
                 "item_code": item["item"],
                 "qty": item["qty"],
                 "price": item["rate"],
-                "total":item["rate"] * item["qty"],
+                "total": item["rate"] * item["qty"],
                 "customer": item.get("customer", {}).get("code") if isinstance(item.get("customer"), dict) else item.get("customer"),
-                "has_commission": item.get("has_commission", 0),  # optional cleanup if field still exists
+                "has_commission": item.get("has_commission", 0),
                 "pamper": pamper
-            })
+            }
+            
+            # Add item remark if provided
+            if item.get("remark"):
+                item_doc["remark"] = item["remark"]
+                
+            doc.append("items", item_doc)
 
         doc.save()
-        
         frappe.db.commit()
 
         frappe.logger().info(f"✅ Invoice saved: {doc.name}")
@@ -89,22 +102,25 @@ def get_invoice(invoice_name):
         "customer_name": frappe.db.get_value("Customer", doc.customer, "customer_name") or '',
         "is_draft": doc.is_draft,
         "lock_update": doc.lock_update,
+        "invoice_remark": doc.get("invoice_remark", ""),
         "items": []
     }
 
     for item in doc.items:
-        doc_data["items"].append({
+        item_data = {
             "item_code": item.item_code,
             "qty": item.qty,
             "price": item.price,
             "total": item.total,
             "customer": item.get("customer"),
             "customer_name": frappe.db.get_value("Customer", item.get("customer"), "customer_name") if item.get("customer") else "",
-            "has_commission": item.get("has_commission", 0)
-        })
+            "has_commission": item.get("has_commission", 0),
+            "remark": item.get("remark", "")
+        }
+        doc_data["items"].append(item_data)
 
     return doc_data
-
+    
 @frappe.whitelist()
 def delete_invoice(invoice_name):
     frappe.delete_doc("Invoice Form", invoice_name, ignore_permissions=False)
@@ -300,7 +316,9 @@ def check_user_permission(user):
             "can_update_draft": False,
             "can_update_submitted": False,
             "can_show_drafts": False,
-            "can_show_submitted": False
+            "can_show_submitted": False,
+            "show_item_remark": False,
+            "show_invoice_remark": False
         }
     
     # Query the Invoice Form Permission Details for this user
@@ -317,6 +335,9 @@ def check_user_permission(user):
         WHERE user = %s
     """, (user,), as_dict=1)
     
+    # Get remark settings from the single DocType
+    remark_settings = frappe.get_single("Invoice Form Permission")
+    
     # Default permissions if no record found
     permissions = {
         "can_login": False,
@@ -325,20 +346,22 @@ def check_user_permission(user):
         "can_update_draft": False,
         "can_update_submitted": False,
         "can_show_drafts": False,
-        "can_show_submitted": False
+        "can_show_submitted": False,
+        "show_item_remark": remark_settings.get("show_item_remark", 0) == 1,
+        "show_invoice_remark": remark_settings.get("show_invoice_remark", 0) == 1
     }
     
     # Update with actual permissions if record exists
     if permission_record:
         record = permission_record[0]
-        permissions = {
+        permissions.update({
             "can_login": record.login == 1,
             "can_delete_invoice": record.delete_invoice == 1,
             "can_submit_invoice": record.submit_invoice == 1,
             "can_update_draft": record.update_draft_invoice == 1,
             "can_update_submitted": record.update_submitted_invoice == 1,
             "can_show_drafts": record.show_drafts == 1,
-            "can_show_submitted": record.show_submitted == 1
-        }
+            "can_show_submitted": record.show_submitted == 1,
+        })
     
     return permissions

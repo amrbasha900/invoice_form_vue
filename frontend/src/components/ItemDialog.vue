@@ -141,6 +141,7 @@
               <label for="Customer">{{ t('customer') }}</label>
             </FloatLabel>
           </div>
+          
           <div class="col-span-1 flex items-center justify-center">
             <Button 
               icon="pi pi-trash" 
@@ -159,6 +160,20 @@
           {{ t('customerIsRequired') }}
         </span>
       </div>
+
+      <!-- Add after the customer field in ItemDialog.vue -->
+<div v-if="showItemRemark" class="w-full mt-4">
+  <FloatLabel variant="on" class="w-full block">
+    <Textarea
+      v-model="item.remark"
+      inputId="remark"
+      rows="2"
+      class="w-full"
+      :disabled="!canEditItem"
+    />
+    <label for="remark">{{ t('remark') }}</label>
+  </FloatLabel>
+</div>
       
       <div class="grid grid-cols-3 gap-2 mt-4">
         <div class="col-span-1">
@@ -187,7 +202,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, watch } from "vue";
+import { reactive, ref, computed, watch, inject } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import AutoComplete from "primevue/autocomplete";
@@ -196,14 +211,14 @@ import FloatLabel from "primevue/floatlabel";
 import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useI18n } from 'vue-i18n';
-
+import Textarea from "primevue/textarea";
 const { t } = useI18n();
 
 const confirm = useConfirm();
 const toast = useToast();
 
 import { onMounted } from "vue";
-
+const $permissions = inject('$permissions');
 // Props from parent
 const props = defineProps({
   visible: {
@@ -267,7 +282,8 @@ const item = reactive({
   amount: null,
   customer: "",
   qtyEditing: false,
-  rateEditing: false
+  rateEditing: false,
+  remark: "",
 });
 const itemSuggestions = ref([]);
 const customerSuggestions = ref([]);
@@ -300,7 +316,9 @@ const canDeleteItem = computed(() => {
 const canDeleteRow = computed(() => {
   return props.isDraft && props.canUpdateDraft;
 });
-
+const showItemRemark = computed(() => {
+  return $permissions?.hasPermission('show_item_remark') || false;
+});
 // Initialize local item from props
 onMounted(() => {
   Object.keys(props.itemData).forEach(key => {
@@ -468,7 +486,8 @@ const saveItem = () => {
     amount: item.amount,
     customer: item.customer,
     qtyEditing: item.qtyEditing,
-    rateEditing: item.rateEditing
+    rateEditing: item.rateEditing,
+    remark: item.remark, // ADD THIS
   };
   emit('save-item', itemData);
 };
@@ -500,10 +519,10 @@ const clearItem = () => {
   if (!canEditItem.value) return;
   
   item.item = "";
-  // Reset related fields if needed
   item.qty = "";
   item.rate = "";
   item.amount = null;
+  item.remark = ""; // ADD THIS
   item.qtyEditing = false;
   item.rateEditing = false;
   emit('clear-item');

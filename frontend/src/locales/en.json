@@ -29,6 +29,8 @@
   "choose": "Choose",
   "upload": "Upload",
   "cancel": "Cancel",
+  "remark": "Remark",
+  "invoiceRemark": "Invoice Remark",
   "dayNames": [
     "Sunday",
     "Monday",
@@ -158,7 +160,8 @@
   "itemUpdated": "Item Updated",
   "itemAdded": "Item Added",
   "itemUpdateSuccess": "Item \"{itemName}\" updated{invoiceName ? \" in invoice \" + invoiceName : \"\"}",
-  "itemAddSuccess": "Item \"{itemName}\" added{invoiceName ? \" to invoice \" + invoiceName : \"\"}",
+  "itemAddSuccess": "Item \"{itemName}\" added to invoice {invoiceName}",
+  "itemAddSuccessNoInvoice": "Item \"{itemName}\" added",
   "selectSupplierBeforeAddingItems": "Please select a supplier before adding items",
   "invoiceCreatedWithItem": "Invoice created with item \"{itemName}\"",
   "failedToSaveInvoice": "Failed to save the invoice. Please try again.",

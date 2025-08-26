@@ -35,6 +35,8 @@ import FloatLabel from 'primevue/floatlabel';
 import Menubar from "primevue/menubar";
 import Tag from 'primevue/tag';
 import IftaLabel from 'primevue/iftalabel';
+import Textarea from 'primevue/textarea';
+
 import { useConfirm } from 'primevue/useconfirm';
 
 // 👇 NEW: preload user language + apply lang/dir
@@ -104,7 +106,7 @@ async function initApp() {
   app.component('Menubar', Menubar);
   app.component('Tag', Tag);
   app.component('IftaLabel', IftaLabel);
-
+  app.component('Textarea', Textarea);
   // Route guards
   // In main.js - Update the router guard
 // In main.js - Simplify router guard

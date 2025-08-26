@@ -7,6 +7,8 @@
  "field_order": [
   "can_not_edit_after",
   "column_break_ysac",
+  "show_item_remark",
+  "show_invoice_remark",
   "user_permission_section",
   "invoice_form_permission_details"
  ],
@@ -32,13 +34,25 @@
    "fieldtype": "Time",
    "label": "Can Not Edit After",
    "non_negative": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "show_item_remark",
+   "fieldtype": "Check",
+   "label": "Show Item Remark"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_invoice_remark",
+   "fieldtype": "Check",
+   "label": "Show Invoice Remark"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-05-06 22:29:00.637553",
+ "modified": "2025-08-20 20:54:25.470890",
  "modified_by": "Administrator",
  "module": "Invoice Form Vue",
  "name": "Invoice Form Permission",
