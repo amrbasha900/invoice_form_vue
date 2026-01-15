@@ -1,6 +1,7 @@
 <!-- views/InvoiceForm.vue (Permissions Fix) -->
 <template>
   <div class="invoice-form max-w-2xl mx-auto p-4">
+    <Toast group="compact" position="top-center" class="compact-toast" />
     <form @submit.prevent="saveInvoice">
       <!-- Invoice Header with Supplier and Customer -->
       <InvoiceHeader
@@ -87,6 +88,7 @@ import { useRoute, onBeforeRouteLeave } from "vue-router";
 import axios from "axios";
 import { useToast } from "primevue/usetoast";
 import { useConfirm } from "primevue/useconfirm";
+import Toast from "primevue/toast";
 
 // Import components
 import InvoiceHeader from "../components/InvoiceHeader.vue";
@@ -216,6 +218,17 @@ const validateDialog = () => {
   return isValid;
 };
 
+// Compact toast positioned at top to avoid covering the item dialog
+const showCompactToast = (options = {}) => {
+  toast.add({
+    group: "compact",
+    life: options.life ?? 2000,
+    closable: options.closable ?? false,
+    severity: options.severity ?? "info",
+    summary: options.summary,
+  });
+};
+
 const validateSupplier = () => {
   let isValid = true;
   requiredMainFields.forEach((field) => {
@@ -315,10 +328,9 @@ const handleDeleteItem = async (index) => {
       }
     } else {
       // Just show a success message if this is a new unsaved invoice
-      toast.add({
+      showCompactToast({
         severity: "success",
         summary: t('deleted'),
-        life: 2000,
       });
     }
     
@@ -328,11 +340,9 @@ const handleDeleteItem = async (index) => {
     showItemDialog.value = false;
   } else {
     console.error("Invalid index for deletion:", index);
-    toast.add({
+    showCompactToast({
       severity: "error",
-      summary: t('error'),
-      detail: t('failedToDeleteItem'),
-      life: 2000,
+      summary: t('failedToDeleteItem'),
     });
   }
 };
@@ -390,11 +400,9 @@ const saveItem = async (itemFormData) => {
     if (isInvoiceNew.value && !invoiceName.value) {
       // Make sure supplier (required field) is present
       if (!validateSupplier()) {
-        toast.add({
+        showCompactToast({
           severity: "error",
-          summary: t('error'),
-          detail: t('selectSupplierBeforeAddingItems'),
-          life: 3000,
+          summary: t('selectSupplierBeforeAddingItems'),
         });
         return;
       }
@@ -412,12 +420,11 @@ const saveItem = async (itemFormData) => {
       isInvoiceNew.value = false;
       invoice.items = updatedItems; // Now update the items array
       
-      toast.add({
-  severity: "success",
-  summary: "Invoice Created",
-  detail: `Invoice created with item "${itemName}"`,
-  life: 3000,
-});
+      showCompactToast({
+        severity: "success",
+        summary: "Done تم",
+        life: 500,
+      });
       
       // Reset dialog for new items
       if (!wasEdit) {
@@ -440,13 +447,10 @@ const saveItem = async (itemFormData) => {
       // Update local state ONLY after successful save
       invoice.items = updatedItems; // Now update the items array
       
-      toast.add({
+      showCompactToast({
         severity: "success",
-        summary: wasEdit ? t('itemUpdated') : t('itemAdded'),
-        detail: wasEdit 
-          ? `Item "${itemName}" updated in invoice ${invoiceName.value}`
-          : `Item "${itemName}" added to invoice ${invoiceName.value}`,
-        life: 3000,
+        summary: "Done تم",
+        life: 2000,
       });
       
       // Reset dialog for new items
@@ -462,14 +466,11 @@ const saveItem = async (itemFormData) => {
       // Update the local items array directly
       invoice.items = updatedItems;
       
-      toast.add({
-  severity: wasEdit ? "success" : "info",
-  summary: wasEdit ? "Item Updated" : "Item Added",
-  detail: wasEdit 
-    ? `Item "${itemName}" updated`
-    : `Item "${itemName}" added`,
-  life: 3000,
-});
+      showCompactToast({
+        severity: wasEdit ? "success" : "info",
+        summary: "Done تم",
+        life: 2000,
+      });
       
       // Reset dialog for new items
       if (!wasEdit) {
@@ -491,12 +492,10 @@ const saveItem = async (itemFormData) => {
     // Check if this is a credit limit error
     if (!handleCreditLimitError(error, confirm, toast)) {
       // If not a credit limit error, show generic error
-      toast.add({
-  severity: "error",
-  summary: "Error",
-  detail: wasEdit ? "Failed to update invoice" : "Failed to save invoice",
-  life: 3000,
-});
+      showCompactToast({
+        severity: "error",
+        summary: wasEdit ? "Failed to update invoice" : "Failed to save invoice",
+      });
     }
     
     // Do not close the dialog on error, let the user try again
@@ -1269,5 +1268,23 @@ onMounted(async () => {
 .p-autocomplete-overlay {
   max-width: 200px !important;
   font-size: 0.9rem;
+}
+
+.compact-toast {
+  max-width: 320px;
+  pointer-events: none;
+}
+
+:deep(.compact-toast .p-toast-message) {
+  margin: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+:deep(.compact-toast .p-toast-summary) {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.2;
 }
 </style>

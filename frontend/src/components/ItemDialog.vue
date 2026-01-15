@@ -10,7 +10,7 @@
       width: '100%',
       maxWidth: '400px',
       position: 'fixed',
-      top: '2%',
+      top: '10%',
       left: '50%',
       transform: 'translateX(-50%)',
     }" 
