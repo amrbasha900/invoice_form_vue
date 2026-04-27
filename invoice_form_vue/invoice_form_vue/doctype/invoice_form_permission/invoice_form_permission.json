@@ -9,6 +9,7 @@
   "column_break_ysac",
   "show_item_remark",
   "show_invoice_remark",
+  "repeat_item",
   "user_permission_section",
   "invoice_form_permission_details"
  ],
@@ -46,13 +47,20 @@
    "fieldname": "show_invoice_remark",
    "fieldtype": "Check",
    "label": "Show Invoice Remark"
+  },
+  {
+   "default": "0",
+   "description": "Repeat Item In Add Item Popup",
+   "fieldname": "repeat_item",
+   "fieldtype": "Check",
+   "label": "Repeat Item"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-08-20 20:54:25.470890",
+ "modified": "2026-04-27 00:05:29.969689",
  "modified_by": "Administrator",
  "module": "Invoice Form Vue",
  "name": "Invoice Form Permission",

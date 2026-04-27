@@ -170,6 +170,10 @@ const showInvoiceRemark = computed(() => {
 const showItemRemark = computed(() => {
   return $permissions?.hasPermission('show_item_remark') || false;
 });
+
+const repeatItem = computed(() => {
+  return $permissions?.hasPermission('repeat_item') || false;
+});
 // NEW FUNCTION: Handle row navigation from dialog
 const handleRowNavigation = (newIndex) => {
   console.log('Navigation requested to row:', newIndex);
@@ -428,7 +432,7 @@ const saveItem = async (itemFormData) => {
       
       // Reset dialog for new items
       if (!wasEdit) {
-        resetDialog();
+        resetDialog({ preserveItem: repeatItem.value });
         showItemDialog.value = true; // Keep dialog open for adding more items
       } else {
         showItemDialog.value = true;
@@ -455,7 +459,7 @@ const saveItem = async (itemFormData) => {
       
       // Reset dialog for new items
       if (!wasEdit) {
-        resetDialog();
+        resetDialog({ preserveItem: repeatItem.value });
         showItemDialog.value = true; // Keep dialog open for adding more items
       } else {
         showItemDialog.value = true;
@@ -474,7 +478,7 @@ const saveItem = async (itemFormData) => {
       
       // Reset dialog for new items
       if (!wasEdit) {
-        resetDialog();
+        resetDialog({ preserveItem: repeatItem.value });
         showItemDialog.value = true;
       } else {
         showItemDialog.value = true;
@@ -503,8 +507,10 @@ const saveItem = async (itemFormData) => {
 };
 
 // Reset form + edit index
-const resetDialog = () => {
-  newItem.item = "";
+const resetDialog = ({ preserveItem = false } = {}) => {
+  if (!preserveItem) {
+    newItem.item = "";
+  }
   newItem.qty = "";
   newItem.qtyEditing = false;
   newItem.rate = "";

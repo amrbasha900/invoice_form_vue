@@ -318,7 +318,8 @@ def check_user_permission(user):
             "can_show_drafts": False,
             "can_show_submitted": False,
             "show_item_remark": False,
-            "show_invoice_remark": False
+            "show_invoice_remark": False,
+            "repeat_item": False
         }
     
     # Query the Invoice Form Permission Details for this user
@@ -348,7 +349,8 @@ def check_user_permission(user):
         "can_show_drafts": False,
         "can_show_submitted": False,
         "show_item_remark": remark_settings.get("show_item_remark", 0) == 1,
-        "show_invoice_remark": remark_settings.get("show_invoice_remark", 0) == 1
+        "show_invoice_remark": remark_settings.get("show_invoice_remark", 0) == 1,
+        "repeat_item": remark_settings.get("repeat_item", 0) == 1
     }
     
     # Update with actual permissions if record exists
