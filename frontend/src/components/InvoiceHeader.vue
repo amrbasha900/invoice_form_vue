@@ -10,6 +10,19 @@
     
     <!-- Two columns on small+ screens -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <!-- Invoice Number -->
+      <div v-if="showInvoiceNumber" class="w-full">
+        <FloatLabel variant="on" class="w-full block">
+          <InputText
+            v-model="localReferenceNumber"
+            inputId="reference_number"
+            class="w-full"
+            :disabled="disabled"
+          />
+          <label for="reference_number">{{ $t('invoiceNumber') }}</label>
+        </FloatLabel>
+      </div>
+
       <!-- Supplier -->
       <div class="w-full">
         <div class="grid grid-cols-12 gap-1">
@@ -90,6 +103,7 @@
 import { ref, watch, computed } from 'vue';
 import FloatLabel from 'primevue/floatlabel';
 import AutoComplete from 'primevue/autocomplete';
+import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 
 // Props
@@ -101,6 +115,14 @@ const props = defineProps({
   customer: {
     type: [Object, String],
     default: ""
+  },
+  referenceNumber: {
+    type: String,
+    default: ""
+  },
+  showInvoiceNumber: {
+    type: Boolean,
+    default: false
   },
   invoiceName: {
     type: String,
@@ -125,7 +147,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['update:supplier', 'update:customer', 'clear-supplier', 'clear-customer']);
+const emit = defineEmits(['update:supplier', 'update:customer', 'update:referenceNumber', 'clear-supplier', 'clear-customer']);
 
 // Local reactive data
 const supplierSuggestions = ref([]);
@@ -151,6 +173,16 @@ const localCustomer = computed({
     if (props.disabled) return;
     emit('update:customer', value);
     emit('clear-customer'); // To mark the form as dirty
+  }
+});
+
+const localReferenceNumber = computed({
+  get() {
+    return props.referenceNumber;
+  },
+  set(value) {
+    if (props.disabled) return;
+    emit('update:referenceNumber', value);
   }
 });
 

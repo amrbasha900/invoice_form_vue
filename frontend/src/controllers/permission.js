@@ -12,6 +12,9 @@ export default class Permissions {
       can_update_submitted: false,
       can_show_drafts: false,
       can_show_submitted: false,
+      show_item_remark: false,
+      show_invoice_remark: false,
+      show_invoice_number: false,
       repeat_item: false
     };
     this.loaded = false;

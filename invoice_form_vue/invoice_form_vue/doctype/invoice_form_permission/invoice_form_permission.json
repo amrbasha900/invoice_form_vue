@@ -9,6 +9,7 @@
   "column_break_ysac",
   "show_item_remark",
   "show_invoice_remark",
+  "show_invoice_number",
   "repeat_item",
   "user_permission_section",
   "invoice_form_permission_details"
@@ -47,6 +48,12 @@
    "fieldname": "show_invoice_remark",
    "fieldtype": "Check",
    "label": "Show Invoice Remark"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_invoice_number",
+   "fieldtype": "Check",
+   "label": "Show Invoice Number"
   },
   {
    "default": "0",

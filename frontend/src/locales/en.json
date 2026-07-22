@@ -97,6 +97,7 @@
   "emptyFilterMessage": "No results found",
   "emptyMessage": "No available options",
   "invoiceName": "Invoice Name",
+  "invoiceNumber": "Invoice Number",
   "supplier": "Supplier",
   "customer": "Customer",
   "qty": "Qty",

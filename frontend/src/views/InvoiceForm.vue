@@ -7,6 +7,8 @@
       <InvoiceHeader
         v-model:supplier="invoice.supplier"
         v-model:customer="invoice.customer"
+        v-model:reference-number="invoice.reference_number"
+        :show-invoice-number="showInvoiceNumber"
         :invoice-name="invoiceName"
         :all-suppliers="allSuppliers"
         :all-customers="allCustomers"
@@ -116,6 +118,7 @@ const invoiceLocked = ref(false); // Add this to track lock_update status
 const invoice = reactive({
   supplier: "",
   customer: "",
+  reference_number: "",
   invoice_remark: "",
   items: [],
 });
@@ -165,6 +168,10 @@ const isEditingDisabled = computed(() => {
 });
 const showInvoiceRemark = computed(() => {
   return $permissions?.hasPermission('show_invoice_remark') || false;
+});
+
+const showInvoiceNumber = computed(() => {
+  return $permissions?.hasPermission('show_invoice_number') || false;
 });
 
 const showItemRemark = computed(() => {
@@ -393,6 +400,7 @@ const saveItem = async (itemFormData) => {
   const invoiceDataToSave = {
     supplier: invoice.supplier,
     customer: invoice.customer,
+    reference_number: invoice.reference_number,
     invoice_remark: invoice.invoice_remark,
     items: updatedItems, // Use the updated items list for saving
     posting_date: new Date().toISOString().split("T")[0],
@@ -529,6 +537,7 @@ const resetDialog = ({ preserveItem = false } = {}) => {
 const resetInvoiceForm = () => {
   invoice.supplier = "";
   invoice.customer = "";
+  invoice.reference_number = "";
   invoice.invoice_remark = "";
   invoice.items = [];
   invoiceName.value = null;
@@ -550,6 +559,7 @@ const handleSaveInvoice = async (customToast = null) => {
     const invoiceData = {
       supplier: invoice.supplier,
       customer: invoice.customer,
+      reference_number: invoice.reference_number,
       invoice_remark: invoice.invoice_remark,
       items: invoice.items,
       posting_date: new Date().toISOString().split("T")[0],
@@ -938,6 +948,7 @@ const loadInvoice = async (invoiceNameParam) => {
       label: invoiceData.customer_name,
       code: invoiceData.customer,
     };
+    invoice.reference_number = invoiceData.reference_number || "";
     invoice.invoice_remark = invoiceData.invoice_remark
     invoice.items = (invoiceData.items || []).map((item) => ({
       item: item.item_code,
@@ -1000,7 +1011,7 @@ function fixDropdownWidth() {
 
 // Watch for changes to track dirty state
 watch(
-  () => [invoice.supplier, invoice.customer, invoice.items],
+  () => [invoice.supplier, invoice.customer, invoice.reference_number, invoice.items],
   () => {
     isDirty.value = false;
   },

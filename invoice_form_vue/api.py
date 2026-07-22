@@ -44,6 +44,7 @@ def create_invoice(invoice_data):
         
         doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
         doc.posting_date = data.get("posting_date")
+        doc.reference_number = data.get("reference_number") or ""
         invoice_remark = data.get("invoice_remark")
         frappe.logger().info(f"📝 Setting invoice_remark to: '{invoice_remark}'")
         
@@ -103,6 +104,7 @@ def get_invoice(invoice_name):
         "is_draft": doc.is_draft,
         "lock_update": doc.lock_update,
         "invoice_remark": doc.get("invoice_remark", ""),
+        "reference_number": doc.get("reference_number", ""),
         "items": []
     }
 
@@ -319,6 +321,7 @@ def check_user_permission(user):
             "can_show_submitted": False,
             "show_item_remark": False,
             "show_invoice_remark": False,
+            "show_invoice_number": False,
             "repeat_item": False
         }
     
@@ -350,6 +353,7 @@ def check_user_permission(user):
         "can_show_submitted": False,
         "show_item_remark": remark_settings.get("show_item_remark", 0) == 1,
         "show_invoice_remark": remark_settings.get("show_invoice_remark", 0) == 1,
+        "show_invoice_number": remark_settings.get("show_invoice_number", 0) == 1,
         "repeat_item": remark_settings.get("repeat_item", 0) == 1
     }
     
