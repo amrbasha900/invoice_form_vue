@@ -2,4 +2,4 @@
 import './logoAnimation.css';
 
 // Export the path to the logo
-export const logoPath = new URL('./logo_dimenesional.svg', import.meta.url).href;
+export const logoPath = new URL('./logo.png', import.meta.url).href;
