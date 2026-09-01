@@ -203,6 +203,10 @@
   "currentBalance": "Current Balance",
   "availableCredit": "Available Credit",
   "excessAmount": "Excess Amount",
-  "creditLimit": "Credit Limit"
-  
+  "creditLimit": "Credit Limit",
+  "lists": "Lists",
+  "listsCachedHint": "Suppliers, customers and items are stored on this device and refresh automatically when they change.",
+  "refreshLists": "Refresh lists now",
+  "listsRefreshed": "Lists refreshed",
+  "listsRefreshFailed": "Could not refresh the lists"
 }

@@ -45,6 +45,8 @@
               inputId="item" 
               :suggestions="itemSuggestions" 
               optionLabel="label"
+              :delay="150"
+              :virtualScrollerOptions="{ itemSize: 32 }"
               @complete="searchItem" 
               :forceSelection="true" 
               :completeOnFocus="true" 
@@ -132,6 +134,7 @@
                 inputId="Customer"
                 :suggestions="customerSuggestions"
                 optionLabel="label"
+                :delay="150"
                 @complete="searchCustomer"
                 :forceSelection="true"
                 :completeOnFocus="true"
@@ -215,6 +218,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useToast } from "primevue/usetoast";
 import { useI18n } from 'vue-i18n';
 import Textarea from "primevue/textarea";
+import { filterOptions } from "../controllers/options";
 const { t } = useI18n();
 
 const confirm = useConfirm();
@@ -460,20 +464,12 @@ watch(
 // Methods
 const searchItem = (event) => {
   if (!canEditItem.value) return;
-  
-  const query = event.query.toLowerCase();
-  itemSuggestions.value = props.allItems.filter((i) =>
-    i.label.toLowerCase().includes(query)
-  );
+  itemSuggestions.value = filterOptions(props.allItems, event.query);
 };
 
 const searchCustomer = (event) => {
   if (!canEditItem.value) return;
-  
-  const query = event.query?.toLowerCase() || "";
-  customerSuggestions.value = !query
-    ? props.allCustomers.slice(0, 5)
-    : props.allCustomers.filter((c) => c.label.toLowerCase().includes(query));
+  customerSuggestions.value = filterOptions(props.allCustomers, event.query);
 };
 
 const clearCustomer = () => {

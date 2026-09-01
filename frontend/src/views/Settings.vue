@@ -55,6 +55,24 @@
       </div>
     </div>
 
+    <!-- DATA CARD -->
+    <div class="settings-card">
+      <div class="card-header">
+        <i class="pi pi-database icon text-blue-600" />
+        <span>{{$t('lists')}}</span>
+      </div>
+      <div class="card-body flex flex-col gap-2">
+        <div class="text-gray-500 text-sm">{{$t('listsCachedHint')}}</div>
+        <Button
+          :label="$t('refreshLists')"
+          icon="pi pi-refresh"
+          class="p-button-outlined"
+          :loading="refreshingLists"
+          @click="refreshLists"
+        />
+      </div>
+    </div>
+
     <!-- LOGOUT CARD -->
     <div class="settings-card">
       <div class="card-header">
@@ -89,14 +107,35 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { useI18n } from 'vue-i18n'
 
-const { locale } = useI18n()
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { clearOptionsCache, loadOptions } from '../controllers/options'
+
+const { locale, t } = useI18n()
 
 const user = ref({})
 const selectedLang = ref('en')
 const toast = useToast()
 const router = useRouter()
+
+const refreshingLists = ref(false)
+
+// The pickers keep suppliers, customers and items on the device. This throws
+// that copy away and downloads it again, for when a phone is showing stale
+// data and nobody wants to debug why.
+const refreshLists = async () => {
+  refreshingLists.value = true
+  try {
+    clearOptionsCache()
+    await loadOptions()
+    toast.add({ severity: 'success', summary: t('listsRefreshed'), life: 2500 })
+  } catch (error) {
+    console.error('Failed to refresh lists:', error)
+    toast.add({ severity: 'error', summary: t('listsRefreshFailed'), life: 3000 })
+  } finally {
+    refreshingLists.value = false
+  }
+}
 
 const fetchUser = async () => {
   try {

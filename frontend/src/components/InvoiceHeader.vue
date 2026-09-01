@@ -33,6 +33,7 @@
                 inputId="supplier"
                 :suggestions="supplierSuggestions"
                 optionLabel="label"
+                :delay="150"
                 @complete="searchSupplier"
                 :forceSelection="true"
                 :completeOnFocus="true"
@@ -70,7 +71,8 @@
                 v-model="localCustomer" 
                 inputId="customer" 
                 :suggestions="customerSuggestions"
-                optionLabel="label" 
+                optionLabel="label"
+                :delay="150" 
                 @complete="searchCustomer" 
                 :forceSelection="true" 
                 :completeOnFocus="true"
@@ -105,6 +107,7 @@ import FloatLabel from 'primevue/floatlabel';
 import AutoComplete from 'primevue/autocomplete';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import { filterOptions } from '../controllers/options';
 
 // Props
 const props = defineProps({
@@ -189,20 +192,12 @@ const localReferenceNumber = computed({
 // Methods
 const searchSupplier = (event) => {
   if (props.disabled) return;
-  
-  const query = event.query.toLowerCase();
-  supplierSuggestions.value = props.allSuppliers.filter((s) =>
-    s.label.toLowerCase().includes(query)
-  );
+  supplierSuggestions.value = filterOptions(props.allSuppliers, event.query);
 };
 
 const searchCustomer = (event) => {
   if (props.disabled) return;
-  
-  const query = event.query?.toLowerCase() || "";
-  customerSuggestions.value = !query
-    ? props.allCustomers.slice(0, 5)
-    : props.allCustomers.filter((c) => c.label.toLowerCase().includes(query));
+  customerSuggestions.value = filterOptions(props.allCustomers, event.query);
 };
 
 const clearSupplier = () => {

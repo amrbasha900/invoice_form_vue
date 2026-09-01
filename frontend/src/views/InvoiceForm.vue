@@ -100,6 +100,7 @@ import ItemsTable from "../components/ItemsTable.vue";
 import InvoiceButtons from "../components/InvoiceButtons.vue";
 import ItemDialog from "../components/ItemDialog.vue";
 import CreditLimitDialog from '../components/CreditLimitDialog.vue';
+import { loadOptions, formatOption } from "../controllers/options";
 import { useI18n } from 'vue-i18n';
 const showCreditLimitDialog = ref(false);
 const creditLimitData = ref({});
@@ -218,7 +219,7 @@ const handleRowNavigation = (newIndex) => {
   
   // Format the data for the dialog
   Object.assign(newItem, {
-    item: rowData.item?.label ? rowData.item : { label: rowData.item, code: rowData.item },
+    item: rowData.item?.label ? rowData.item : formatOption(rowData.item, ""),
     qty: rowData.qty,
     rate: rowData.rate,
     customer: rowData.customer,
@@ -232,13 +233,18 @@ const handleRowNavigation = (newIndex) => {
 };
 
 // Validate form
+// A picker binds the whole option object, so `{ code: "" }` is truthy while
+// holding nothing. Anything link-shaped is judged by its code.
+const isBlank = (value) => {
+  if (value && typeof value === "object") return !value.code;
+  if (typeof value === "number") return value <= 0;
+  return !value;
+};
+
 const validateDialog = () => {
   let isValid = true;
   requiredFields.forEach((field) => {
-    if (
-      !newItem[field] ||
-      (typeof newItem[field] === "number" && newItem[field] <= 0)
-    ) {
+    if (isBlank(newItem[field])) {
       validationErrors[field] = true;
       isValid = false;
     } else {
@@ -262,10 +268,7 @@ const showCompactToast = (options = {}) => {
 const validateSupplier = () => {
   let isValid = true;
   requiredMainFields.forEach((field) => {
-    if (
-      !invoice[field] ||
-      (typeof invoice[field] === "number" && invoice[field] <= 0)
-    ) {
+    if (isBlank(invoice[field])) {
       validationErrors[field] = true;
       isValid = false;
     } else {
@@ -304,7 +307,7 @@ const onRowClick = (event) => {
   const row = event.data;
   editIndex.value = event.index;
   Object.assign(newItem, {
-    item: row.item?.label ? row.item : { label: row.item, code: row.item },
+    item: row.item?.label ? row.item : formatOption(row.item, ""),
     qty: row.qty,
     rate: row.rate,
     customer: row.customer,
@@ -397,7 +400,7 @@ const saveItem = async (itemFormData) => {
   
   // Create item data object from form
   const itemData = {
-    item: newItem.item.code,
+    item: newItem.item,
     qty: newItem.qty,
     rate: newItem.rate,
     amount: newItem.qty * newItem.rate,
@@ -434,19 +437,20 @@ const saveItem = async (itemFormData) => {
     idempotency_key: idempotencyKey.value,
   };
 
+  // Required on every save, not just the first one: an invoice can lose its
+  // supplier while it is being edited.
+  if (!validateSupplier()) {
+    showCompactToast({
+      severity: "error",
+      summary: t('selectSupplierBeforeAddingItems'),
+    });
+    return;
+  }
+
   isSaving.value = true;
   try {
     // For a new invoice
     if (isInvoiceNew.value && !invoiceName.value) {
-      // Make sure supplier (required field) is present
-      if (!validateSupplier()) {
-        showCompactToast({
-          severity: "error",
-          summary: t('selectSupplierBeforeAddingItems'),
-        });
-        return;
-      }
-
       // Save the invoice to the server
       const response = await axios.post(
         "/api/method/invoice_form_vue.api.create_invoice",
@@ -990,28 +994,26 @@ const loadInvoice = async (invoiceNameParam) => {
     // Set locked status - added this line
     invoiceLocked.value = invoiceData.lock_update === 1;
 
-    invoice.supplier = {
-      label: invoiceData.supplier_name,
-      code: invoiceData.supplier,
-    };
+    // Null, not an empty object: an option object is truthy even with no code
+    // behind it, which is exactly how a missing party slipped past validation.
+    invoice.supplier = invoiceData.supplier
+      ? formatOption(invoiceData.supplier, invoiceData.supplier_name)
+      : null;
 
-    invoice.customer = {
-      label: invoiceData.customer_name,
-      code: invoiceData.customer,
-    };
+    invoice.customer = invoiceData.customer
+      ? formatOption(invoiceData.customer, invoiceData.customer_name)
+      : null;
     invoice.reference_number = invoiceData.reference_number || "";
     invoice.invoice_remark = invoiceData.invoice_remark
     invoice.items = (invoiceData.items || []).map((item) => ({
-      item: item.item_code,
+      item: formatOption(item.item_code, item.item_name),
       qty: item.qty,
       rate: item.price,
       amount: item.total,
-        remark: item.remark || "", // ADD THIS
-
-      customer: {
-        label: item.customer_name || item.customer,
-        code: item.customer,
-      },
+      remark: item.remark || "",
+      customer: item.customer
+        ? formatOption(item.customer, item.customer_name)
+        : null,
     }));
 
     invoiceName.value = invoiceData.name;
@@ -1269,35 +1271,45 @@ const extractHtmlFromError = (errorMessage) => {
 };
 
 
+/**
+ * Re-label the loaded rows from the picker lists.
+ *
+ * get_invoice carries the names itself, so this only matters for a row whose
+ * name is missing there; it keeps the grid from showing a bare code.
+ */
+const relabelInvoiceItems = () => {
+  const byCode = new Map(allItems.value.map((option) => [option.code, option]));
+
+  invoice.items = invoice.items.map((row) => {
+    if (row.item?.name) return row;
+    const known = byCode.get(row.item?.code ?? row.item);
+    return known ? { ...row, item: known } : row;
+  });
+};
+
 // Load data when component is mounted
 onMounted(async () => {
-  try {
-    fixDropdownWidth();
-    const response = await axios.get(
-      "/api/method/invoice_form_vue.api.get_suppliers_and_customers"
-    );
-    const result = response.data.message || response.data;
+  fixDropdownWidth();
 
-    const formatList = (list) =>
-      (list || []).map((entry) => ({
-        label:
-          entry.customer_name ||
-          entry.supplier_name ||
-          entry.name ||
-          entry.item_name,
-        code: entry.name || "",
-      }));
-
-    allSuppliers.value = formatList(result.suppliers);
-    allCustomers.value = formatList(result.customers);
-    allItems.value = formatList(result.items);
-
-    if (route.query.invoice_name) {
-      await loadInvoice(route.query.invoice_name);
-    }
-  } catch (error) {
+  // The lists come off the device first and are only re-downloaded when the
+  // server says they changed, so opening a saved invoice no longer waits
+  // behind them.
+  const options = loadOptions((loaded) => {
+    allSuppliers.value = loaded.suppliers;
+    allCustomers.value = loaded.customers;
+    allItems.value = loaded.items;
+  }).catch((error) => {
     console.error("Error loading supplier/customer data:", error);
-  }
+  });
+
+  await Promise.all([
+    options,
+    route.query.invoice_name ? loadInvoice(route.query.invoice_name) : null,
+  ]);
+
+  // An invoice loaded before the lists arrived shows bare item codes until
+  // they do; relabel it now that they are here.
+  if (route.query.invoice_name) relabelInvoiceItems();
 });
 </script>
 

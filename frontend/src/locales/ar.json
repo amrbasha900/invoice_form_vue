@@ -160,6 +160,10 @@
   "currentBalance": "الرصيد الحالي",
   "availableCredit": "الرصيد المتاح",
   "excessAmount": "المبلغ الزائد",
-  "creditLimit": "حد الائتمان"
-  
-  }
+  "creditLimit": "حد الائتمان",
+  "lists": "القوائم",
+  "listsCachedHint": "الموردون والعملاء والأصناف محفوظة على هذا الجهاز وتُحدَّث تلقائياً عند تغيّرها.",
+  "refreshLists": "تحديث القوائم الآن",
+  "listsRefreshed": "تم تحديث القوائم",
+  "listsRefreshFailed": "تعذّر تحديث القوائم"
+}

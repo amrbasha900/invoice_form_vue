@@ -1,21 +1,91 @@
 # apps/invoice_form_vue/api.py
 import frappe
+import hashlib
 import json
 from frappe import _
 import frappe.translate
 import datetime
 
 
+# The three master lists the pickers are built from: doctype, its filters, and
+# the field holding the human-readable name next to the code (`name`).
+OPTION_SOURCES = (
+    ("suppliers", "Supplier", {"is_farmer": 1}, "supplier_name"),
+    ("customers", "Customer", {"is_customer": 1, "is_frozen": 0}, "customer_name"),
+    ("items", "Item", {"commission_item": 0, "is_agriculture_item": 1}, "item_name"),
+)
+
+
+def _options_version():
+    """Short hash that changes whenever any of the three lists changes.
+
+    Deliberately cheap: a COUNT and a MAX over indexed columns, no rows read.
+    The count alone would miss a rename (editing an item's name leaves the
+    count untouched), so `modified` is folded in as well.
+    """
+    parts = []
+    for _key, doctype, filters, _name_field in OPTION_SOURCES:
+        # get_list, not get_all: these lists are permission-filtered, so the
+        # version has to describe what this user can actually see.
+        row = frappe.get_list(
+            doctype,
+            filters=filters,
+            fields=["count(name) as total", "max(modified) as last_change"],
+        )[0]
+        parts.append(f"{row.total}:{row.last_change}")
+
+    return hashlib.md5("|".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
+def _options_payload(version):
+    """Every option, as compact [code, name] pairs.
+
+    Nothing here is cached server-side: the payload is built, sent and dropped.
+    The client stores it on the device and only asks for it again when the
+    version above tells it something actually changed.
+    """
+    payload = {"version": version}
+
+    for key, doctype, filters, name_field in OPTION_SOURCES:
+        payload[key] = frappe.get_list(
+            doctype,
+            filters=filters,
+            fields=["name", name_field],
+            order_by="name asc",
+            limit_page_length=0,
+            as_list=True,
+        )
+
+    return payload
+
+
 @frappe.whitelist()
-def get_suppliers_and_customers():
-    suppliers = frappe.get_list("Supplier", filters={'is_farmer':1},fields=["name", "supplier_name"])
-    customers = frappe.get_list("Customer", filters={'is_customer':1, 'is_frozen':0},fields=["name", "customer_name"])
-    items = frappe.get_list("Item", filters={'commission_item':0, "is_agriculture_item": 1},fields=["name", "item_name"])
-    return {
-        "suppliers": suppliers,
-        "customers": customers,
-        "items": items,
-    }
+def get_suppliers_and_customers(version=None):
+    """Suppliers, customers and items for the pickers.
+
+    Pass the version the device already holds; if nothing has changed since,
+    the answer is a few dozen bytes instead of a megabyte.
+    """
+    current = _options_version()
+    if version and version == current:
+        return {"version": current, "unchanged": True}
+
+    return _options_payload(current)
+
+
+def _link_code(value):
+    """The document name behind a picker value.
+
+    The Vue pickers bind the whole option object, so a link arrives as
+    {"label": ..., "code": ...}; older clients send a bare string. An option
+    object is truthy even when its code is empty, so callers must test what
+    this returns rather than the raw value.
+    """
+    if isinstance(value, dict):
+        value = value.get("code")
+
+    return (value or "").strip() if isinstance(value, str) else ""
+
 
 def get_invoice_by_idempotency_key(idempotency_key):
     """Name of the Invoice Form already created for this key, if any."""
@@ -31,10 +101,10 @@ def create_invoice(invoice_data):
     try:
         data = json.loads(invoice_data)
         frappe.logger().info(f"📥 Incoming invoice data: {data}")
-        frappe.log_error(message=f"📥 Incoming invoice data: {str(data)}", title= 'l')
 
-        if not data.get("supplier"):
-            frappe.throw(_("Supplier and Customer are required"))
+        supplier = _link_code(data.get("supplier"))
+        if not supplier:
+            frappe.throw(_("Supplier is required"))
 
         idempotency_key = (data.get("idempotency_key") or "").strip() or None
 
@@ -66,7 +136,8 @@ def create_invoice(invoice_data):
             else:
                 frappe.log_error(title="Invoice Form Creation error", message="No Papmer Found in Papmer For User In Invoice Form Permission Details")
         
-        doc.customer = data["customer"]["code"] if isinstance(data["customer"], dict) else data["customer"]
+        doc.supplier = supplier
+        doc.customer = _link_code(data.get("customer")) or None
         doc.posting_date = data.get("posting_date")
         doc.reference_number = data.get("reference_number") or ""
         invoice_remark = data.get("invoice_remark")
@@ -76,19 +147,16 @@ def create_invoice(invoice_data):
         if data.get("invoice_remark"):
             doc.invoice_remark = data["invoice_remark"]
 
-        if "supplier" in data:
-            doc.supplier = data["supplier"]["code"] if isinstance(data["supplier"], dict) else data["supplier"]
-
         # Clear & append items
         doc.items = []
 
         for item in data.get("items", []):
             item_doc = {
-                "item_code": item["item"],
+                "item_code": _link_code(item.get("item")),
                 "qty": item["qty"],
                 "price": item["rate"],
                 "total": item["rate"] * item["qty"],
-                "customer": item.get("customer", {}).get("code") if isinstance(item.get("customer"), dict) else item.get("customer"),
+                "customer": _link_code(item.get("customer")) or None,
                 "has_commission": item.get("has_commission", 0),
                 "pamper": pamper
             }
@@ -101,7 +169,6 @@ def create_invoice(invoice_data):
 
         try:
             doc.save()
-            frappe.db.commit()
         except (frappe.UniqueValidationError, frappe.DuplicateEntryError):
             # Two concurrent requests carrying the same idempotency key raced
             # each other; the loser adopts the invoice the winner committed.
@@ -123,9 +190,14 @@ def create_invoice(invoice_data):
             "customer": doc.customer
         }
 
-    except Exception as e:
-        error_message = frappe.get_traceback()
-        frappe.log_error(title="❌ Invoice Creation Failed", message=error_message)
+    except (frappe.ValidationError, frappe.PermissionError):
+        # "Supplier is required", a credit limit, a missing permission: the
+        # user can act on these, so let the real message through. Swallowing
+        # them behind the generic text below is why a rejected save used to
+        # look like a random glitch.
+        raise
+    except Exception:
+        frappe.log_error(title="❌ Invoice Creation Failed", message=frappe.get_traceback())
         frappe.db.rollback()
         frappe.throw(_("Something went wrong while saving the invoice. Please contact support."))
 
@@ -148,6 +220,7 @@ def get_invoice(invoice_name):
     for item in doc.items:
         item_data = {
             "item_code": item.item_code,
+            "item_name": item.get("item_name") or "",
             "qty": item.qty,
             "price": item.price,
             "total": item.total,

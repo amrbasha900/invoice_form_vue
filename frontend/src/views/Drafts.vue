@@ -48,7 +48,7 @@
                     </div>
                     <div class="text-gray-500 mb-0.5">
                       <i class="pi pi-truck mr-1" /> <b>{{$t('supplier')}} :</b>
-                      {{ item.supplier_name || "N/A" }}
+                      {{ supplierLabel(item) }}
                     </div>
                     <div class="text-gray-400">
                       <i class="pi pi-list mr-1" /> <b>{{$t('itemsDraft')}} :</b>
@@ -87,6 +87,7 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import DataView from "primevue/dataview";
+import { formatOption } from "../controllers/options";
 
 const drafts = ref([]);
 const loading = ref(true);
@@ -98,6 +99,12 @@ const $permissions = inject("$permissions");
 const hasPermission = computed(() => {
   return $permissions?.hasPermission("can_show_drafts") || false;
 });
+
+// Same "(name) code" label the invoice pickers use.
+const supplierLabel = (invoice) =>
+  invoice.supplier
+    ? formatOption(invoice.supplier, invoice.supplier_name).label
+    : "N/A";
 
 const viewInvoice = (invoice) => {
   router.push(`/invoice?invoice_name=${invoice.name}`);
