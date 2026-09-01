@@ -180,6 +180,8 @@
           <Button 
             v-if="canEditItem"
             :label="editIndex !== null ? t('update') : t('add')" 
+            :loading="saving"
+            :disabled="saving"
             @click="saveItem" 
             class="w-full" 
           />
@@ -192,6 +194,7 @@
             :label="t('delete')" 
             icon="pi pi-trash" 
             severity="danger"
+            :disabled="saving"
             @click="handleDelete" 
             class="w-full" 
           />
@@ -221,6 +224,10 @@ import { onMounted } from "vue";
 const $permissions = inject('$permissions');
 // Props from parent
 const props = defineProps({
+  saving: {
+    type: Boolean,
+    default: false
+  },
   visible: {
     type: Boolean,
     required: true
@@ -478,6 +485,7 @@ const clearCustomer = () => {
 
 const saveItem = () => {
   if (!canEditItem.value) return;
+  if (props.saving) return;
   
   const itemData = {
     item: item.item,

@@ -43,6 +43,7 @@
       <!-- Action Buttons -->
       <InvoiceButtons
         :is-invoice-new="!invoiceName"
+        :saving="isSaving"
         @save="handleSaveInvoice"
         @delete="deleteInvoice"
         @submit="submitInvoice"
@@ -62,6 +63,7 @@
       :all-customers="allCustomers"
       :validation-errors="validationErrors"
       :totalRows="invoice.items.length" 
+      :saving="isSaving"
       @save-item="saveItem"
       @delete-item="handleDeleteItem"
       @clear-customer="isDirty = false"
@@ -135,6 +137,23 @@ const newItem = reactive({
   remark: "",
 });
 const isDirty = ref(false);
+
+// True while a create/update request is in flight. Blocks a second request
+// from being fired for the same invoice (double taps on a slow connection
+// used to create one invoice per tap).
+const isSaving = ref(false);
+
+// Stable per-creation-attempt token. Every request that may create THIS
+// invoice carries it, so a retry the server already handled comes back with
+// the same invoice instead of a new one. Rotated once a new invoice starts.
+const idempotencyKey = ref(newIdempotencyKey());
+
+function newIdempotencyKey() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `inv-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
 
 // Required field keys
 const requiredFields = ["item", "qty", "rate", "customer"];
@@ -312,6 +331,10 @@ const onCreditLimitDialogClose = () => {
 const handleDeleteItem = async (index) => {
   // Check permission
   if (!canDeleteInvoice.value) return;
+
+  // Never drop a row locally while a save is in flight: the follow-up save
+  // that would persist the deletion is blocked, so the row would come back.
+  if (isSaving.value) return;
   
   if (index !== null && index >= 0 && index < invoice.items.length) {
     // Remove the item from the local array
@@ -363,7 +386,10 @@ const handleDeleteItem = async (index) => {
 const saveItem = async (itemFormData) => {
   // Check permission
   if (!canEditInvoice.value) return;
-  
+
+  // A request is already on its way; ignore the extra tap.
+  if (isSaving.value) return;
+
   // Update newItem with the data from the dialog
   Object.assign(newItem, itemFormData);
   
@@ -405,8 +431,10 @@ const saveItem = async (itemFormData) => {
     items: updatedItems, // Use the updated items list for saving
     posting_date: new Date().toISOString().split("T")[0],
     invoice_id: invoiceName.value,
+    idempotency_key: idempotencyKey.value,
   };
 
+  isSaving.value = true;
   try {
     // For a new invoice
     if (isInvoiceNew.value && !invoiceName.value) {
@@ -511,6 +539,8 @@ const saveItem = async (itemFormData) => {
     }
     
     // Do not close the dialog on error, let the user try again
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -542,20 +572,28 @@ const resetInvoiceForm = () => {
   invoice.items = [];
   invoiceName.value = null;
   isInvoiceNew.value = true;
+  idempotencyKey.value = newIdempotencyKey();
 };
 
 // Save Invoice Logic
 const handleSaveInvoice = async (customToast = null) => {
   // Check permission
   if (!canEditInvoice.value) return;
-  
+
+  // A request is already on its way; ignore the extra tap.
+  if (isSaving.value) return;
+
   if (!validateSupplier()) return;
-  
-  // Add credit limit pre-validation
-  const creditLimitsOk = await validateCustomerCreditLimits();
-  if (!creditLimitsOk) return;
-  
+
+  // Claimed before the first await so a second tap cannot slip through the
+  // check above while the credit-limit lookup is still running.
+  isSaving.value = true;
+
   try {
+    // Add credit limit pre-validation
+    const creditLimitsOk = await validateCustomerCreditLimits();
+    if (!creditLimitsOk) return;
+
     const invoiceData = {
       supplier: invoice.supplier,
       customer: invoice.customer,
@@ -564,6 +602,7 @@ const handleSaveInvoice = async (customToast = null) => {
       items: invoice.items,
       posting_date: new Date().toISOString().split("T")[0],
       invoice_id: invoiceName.value,
+      idempotency_key: idempotencyKey.value,
     };
 
     console.log("📝 Invoice remark being sent:", invoiceData.invoice_remark);
@@ -650,6 +689,8 @@ const handleSaveInvoice = async (customToast = null) => {
         life: 3000 
       });
     }
+  } finally {
+    isSaving.value = false;
   }
 };
 
@@ -849,6 +890,10 @@ const deleteInvoice = async () => {
 const handleDeleteItemFromTable = async (index) => {
   // Check permission
   if (!canDeleteInvoice.value) return;
+
+  // Never drop a row locally while a save is in flight: the follow-up save
+  // that would persist the deletion is blocked, so the row would come back.
+  if (isSaving.value) return;
   
   if (index !== null && index >= 0 && index < invoice.items.length) {
     // Remove the item from the local array
@@ -903,7 +948,11 @@ const handleDeleteItemFromTable = async (index) => {
 const submitInvoice = async () => {
   // Check permission
   if (!canSubmitInvoice.value) return;
-  
+
+  // Same double-tap protection as the save paths.
+  if (isSaving.value) return;
+  isSaving.value = true;
+
   try {
     const response = await axios.post(
       "/api/method/invoice_form_vue.api.remove_from_invoice",
@@ -922,6 +971,8 @@ const submitInvoice = async () => {
       summary: t('error'),
       detail: t('submitInvoiceFailed'),
     });
+  } finally {
+    isSaving.value = false;
   }
 };
 

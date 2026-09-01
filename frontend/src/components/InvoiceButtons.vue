@@ -14,6 +14,7 @@
       :label="$t('deleteInvoice')" 
       icon="pi pi-trash" 
       severity="danger"
+      :disabled="saving"
       @click="$emit('delete')" 
       class="w-full mt-2" 
     />
@@ -23,6 +24,8 @@
       :label="$t('submitInvoice')" 
       icon="pi pi-check" 
       severity="success"
+      :loading="saving"
+      :disabled="saving"
       @click="$emit('submit')" 
       class="w-full mt-2" 
     />
@@ -36,6 +39,10 @@ const props = defineProps({
   isInvoiceNew: {
     type: Boolean,
     required: true
+  },
+  saving: {
+    type: Boolean,
+    default: false
   },
   canSave: {
     type: Boolean,

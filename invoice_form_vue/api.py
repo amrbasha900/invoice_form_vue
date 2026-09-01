@@ -17,6 +17,15 @@ def get_suppliers_and_customers():
         "items": items,
     }
 
+def get_invoice_by_idempotency_key(idempotency_key):
+    """Name of the Invoice Form already created for this key, if any."""
+    if not idempotency_key:
+        return None
+    return frappe.db.get_value(
+        "Invoice Form", {"idempotency_key": idempotency_key}, "name"
+    )
+
+
 @frappe.whitelist()
 def create_invoice(invoice_data):
     try:
@@ -27,15 +36,30 @@ def create_invoice(invoice_data):
         if not data.get("supplier"):
             frappe.throw(_("Supplier and Customer are required"))
 
+        idempotency_key = (data.get("idempotency_key") or "").strip() or None
+
         # Create or fetch doc
-        doc = (
-            frappe.new_doc("Invoice Form")
-            if not data.get("invoice_id")
-            else frappe.get_doc("Invoice Form", data["invoice_id"])
-        )
-        
+        if data.get("invoice_id"):
+            doc = frappe.get_doc("Invoice Form", data["invoice_id"])
+            is_new = False
+        else:
+            # A retry of a request that already went through (flaky network, the
+            # user tapping Add several times) carries the same idempotency key.
+            # Reuse that invoice instead of creating another one.
+            existing = get_invoice_by_idempotency_key(idempotency_key)
+            if existing:
+                frappe.logger().info(
+                    f"\u267b\ufe0f Reusing invoice {existing} for idempotency key {idempotency_key}"
+                )
+                doc = frappe.get_doc("Invoice Form", existing)
+                is_new = False
+            else:
+                doc = frappe.new_doc("Invoice Form")
+                doc.idempotency_key = idempotency_key
+                is_new = True
+
         pamper = None
-        if not data.get("invoice_id"):
+        if is_new:
             pamper_name = frappe.db.sql("select pamper from `tabInvoice Form Permission Details` where user = '"+frappe.session.user+"' ", as_dict=1)
             if pamper_name:
                 doc.pamper = pamper_name[0].pamper 
@@ -75,8 +99,21 @@ def create_invoice(invoice_data):
                 
             doc.append("items", item_doc)
 
-        doc.save()
-        frappe.db.commit()
+        try:
+            doc.save()
+            frappe.db.commit()
+        except (frappe.UniqueValidationError, frappe.DuplicateEntryError):
+            # Two concurrent requests carrying the same idempotency key raced
+            # each other; the loser adopts the invoice the winner committed.
+            frappe.db.rollback()
+            winner = get_invoice_by_idempotency_key(idempotency_key) if is_new else None
+            if not winner:
+                raise
+            frappe.clear_messages()
+            frappe.logger().info(
+                f"\u267b\ufe0f Duplicate save raced, adopting invoice {winner}"
+            )
+            doc = frappe.get_doc("Invoice Form", winner)
 
         frappe.logger().info(f"✅ Invoice saved: {doc.name}")
 
